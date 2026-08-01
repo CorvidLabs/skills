@@ -1,0 +1,4 @@
+interface:
+  display_name: "Augur Risk Gate"
+  short_description: "Assess and gate deterministic change risk"
+  default_prompt: "Use $augur to assess this change and choose the correct report or gate command."

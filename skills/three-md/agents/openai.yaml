@@ -1,0 +1,4 @@
+interface:
+  display_name: "3md Documents"
+  short_description: "Author and validate layered 3md documents"
+  default_prompt: "Use $three-md to validate or inspect this 3md document."
