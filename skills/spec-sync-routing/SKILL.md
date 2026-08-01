@@ -18,13 +18,9 @@ If the repository can generate or refresh its local Spec Sync skill, do that aft
 installing this shared catalog entry. Do not overwrite or silently replace its local
 material with shared text.
 
-## Route the change
+## Route workflow questions
 
-Use one change for one mergeable PR unless the repository's local policy requires an
-atomic multi-PR change. Scope approval covers the stable promise, affected areas, and
-semantic requirements. Evidence, test attempts, review output, rebases, and archive
-metadata normally do not require renewed approval; an actual scope expansion does.
-
-Keep code, tests, and canonical spec updates aligned. Use the local workflow to verify
-both code-to-spec and spec-to-code consistency, then finalize/archive according to the
-project's configured lifecycle.
+For change lifecycle, approval boundaries, evidence, finalization, and archive behavior,
+read the shared `spec-sync` skill first and then follow the generated repository-local
+skill and configuration. They define the workflow; this skill only tells you where to
+find it.
