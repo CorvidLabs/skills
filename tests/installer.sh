@@ -143,4 +143,5 @@ root_status="$("$installer" status --repo "$test_dir")"
 grep -q $'^spec-sync\t.*\tcurrent$' <<< "$root_status"
 nested_status="$("$installer" status --repo "$test_dir/project/subdirectory")"
 grep -q $'^spec-sync\t.*\tcurrent$' <<< "$nested_status"
+"$installer" status --repo "$test_dir" | grep -q '^agent-coordination'
 echo "installer tests passed"

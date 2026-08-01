@@ -235,6 +235,7 @@ status_skills() {
         return
     fi
     require_python
+    local status_output=""
     while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
         local destination="$repo/$destination_rel"
         local state="missing"
@@ -280,8 +281,13 @@ status_skills() {
         elif [[ -e "$destination" || -L "$destination" ]]; then
             state="modified"
         fi
-        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+        local status_line
+        printf -v status_line '%s\t%s\t%s\t%s\t%s\t%s' \
             "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$state"
+        if [[ -n "$status_output" ]]; then
+            status_output+=$'\n'
+        fi
+        status_output+="$status_line"
     done < <(python3 - "$manifest" <<'PY'
 import json
 import sys
@@ -301,6 +307,7 @@ for item in data.get("installs", []):
     print("\t".join(str(field) for field in fields))
 PY
     )
+    [[ -z "$status_output" ]] || printf '%s\n' "$status_output"
 }
 
 case "${1:-}" in
