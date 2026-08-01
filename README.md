@@ -82,7 +82,7 @@ bin/corvid-skills install agent-coordination --repo /path/to/project --host code
 bin/corvid-skills install spec-sync --repo /path/to/project --host claude
 ```
 
-Supported hosts are `codex`, `claude`, and `cursor`. Installations copy the selected
+Supported hosts are `codex`, `claude`, `cursor`, and `gemini`. Installations copy the selected
 skill and record its source revision, destination, install mode, and content digest
 in `.corvid-skills.json`. Existing skill directories are never overwritten.
 

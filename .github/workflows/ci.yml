@@ -59,10 +59,10 @@ jobs:
 
           fledge skills list | grep -qx 'agent-coordination'
           fledge skills list | grep -qx 'spec-sync'
-          fledge skills install agent-coordination --repo "$test_repo" --host codex
+          fledge skills install agent-coordination --repo "$test_repo" --host gemini
           fledge skills install spec-sync --repo "$test_repo" --host codex
           fledge skills status --repo "$test_repo" | grep -q '^agent-coordination'
           fledge skills status --repo "$test_repo" | grep -q '^spec-sync'
 
-          test -f "$test_repo/.codex/skills/agent-coordination/SKILL.md"
+          test -f "$test_repo/.gemini/skills/agent-coordination/SKILL.md"
           test -f "$test_repo/.codex/skills/spec-sync/SKILL.md"

@@ -11,7 +11,7 @@ Manage shared CorvidLabs agent skills in one repository.
 
 Usage:
   fledge skills list
-  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor>] [--link] [--dry-run]
+  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|gemini>] [--link] [--dry-run]
   fledge skills status [--repo <path>]
 
 Install copies a selected skill into a repository-local agent directory and
@@ -34,6 +34,7 @@ host_directory() {
         codex) printf '.codex/skills' ;;
         claude) printf '.claude/skills' ;;
         cursor) printf '.cursor/skills' ;;
+        gemini) printf '.gemini/skills' ;;
         *) fail "unsupported host: $1" ;;
     esac
 }
@@ -79,7 +80,7 @@ resolve_host() {
 
     local candidates=()
     local host
-    for host in codex claude cursor; do
+    for host in codex claude cursor gemini; do
         [[ -d "$repo/$(host_directory "$host")" ]] && candidates+=("$host")
     done
     if [[ ${#candidates[@]} -eq 1 ]]; then
@@ -87,7 +88,7 @@ resolve_host() {
         return
     fi
     if [[ ${#candidates[@]} -eq 0 ]]; then
-        fail "cannot infer an agent host; pass --host codex, --host claude, or --host cursor"
+        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, or --host gemini"
     fi
     fail "multiple agent hosts are present (${candidates[*]}); pass --host explicitly"
 }
@@ -249,6 +250,7 @@ status_skills() {
             codex) expected_destination_rel=".codex/skills/$skill" ;;
             claude) expected_destination_rel=".claude/skills/$skill" ;;
             cursor) expected_destination_rel=".cursor/skills/$skill" ;;
+            gemini) expected_destination_rel=".gemini/skills/$skill" ;;
             *) safe_manifest="false" ;;
         esac
         [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || safe_manifest="false"
