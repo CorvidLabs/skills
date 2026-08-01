@@ -14,7 +14,7 @@ mkdir -p "$test_dir/project/subdirectory"
 "$installer" list | grep -qx 'spec-sync'
 "$installer" list | grep -qx 'let'
 "$installer" list | grep -qx 'rune'
-for skill in fledge-workflows spec-sync-routing ci-release-hygiene public-release-audit; do
+for skill in fledge-workflows spec-sync-routing ci-release-hygiene public-release-audit corvid-swift-package; do
     "$installer" list | grep -qx "$skill"
     skill_repo="$test_dir/$skill"
     mkdir -p "$skill_repo"

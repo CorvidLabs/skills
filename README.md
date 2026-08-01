@@ -13,6 +13,8 @@ Spec Sync material.
 - `rune` — safely observe or drive a confirmed CLI-agent session through a bounded PTY.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
+- `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
+  Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
 - `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
 - `spec-sync-routing` — route shared guidance to the repo-generated Spec Sync truth.
 - `ci-release-hygiene` — keep CI and release evidence tied to the current commit.
