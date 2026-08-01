@@ -20,6 +20,7 @@ for skill in \
     attest \
     augur \
     ci-release-hygiene \
+    corvid-swift-package \
     fledge-workflows \
     public-release-audit \
     spec-sync-routing \
