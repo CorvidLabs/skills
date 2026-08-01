@@ -10,6 +10,8 @@ Spec Sync material.
   `fledge rune` only to observe or send a scoped message to that confirmed agent session.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
+- `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
+  Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
 
 ## Install with Fledge
 
