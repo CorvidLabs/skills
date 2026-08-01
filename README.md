@@ -8,6 +8,11 @@ Spec Sync material.
 
 - `agent-coordination` — use `fledge let` to discover the correct context, then use
   `fledge rune` only to observe or send a scoped message to that confirmed agent session.
+- `let` — locate the authoritative repository context, worktrees, sessions, instructions,
+  skills, and recent activity before acting.
+- `rune` — safely observe or drive a confirmed CLI-agent session through a bounded PTY.
+- `let-rune-operations` — the combined discovery-to-intervention protocol for supervising
+  agents, CI, and sandbox work without creating conflicting instructions.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
 
