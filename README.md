@@ -10,6 +10,8 @@ Spec Sync material.
   `fledge rune` only to observe or send a scoped message to that confirmed agent session.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
+- `corvid-web-bun` — build and validate CorvidLabs Bun web projects while deferring
+  framework, architecture, and release policy to the repository-local guides.
 
 ## Install with Fledge
 
