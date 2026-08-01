@@ -96,6 +96,12 @@ jobs:
       - name: Prove Grok placement with Let find skills
         shell: bash
         run: |
+          # Let’s fledge plugin build hook requires Bun.
+          curl -fsSL https://bun.sh/install | bash
+          export BUN_INSTALL="${HOME}/.bun"
+          export PATH="${BUN_INSTALL}/bin:${PATH}"
+          command -v bun
+          bun --version
           fledge plugins install CorvidLabs/let --yes --non-interactive
           test_repo="$(mktemp -d)/grok-let"
           mkdir -p "$test_repo"
