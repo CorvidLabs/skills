@@ -23,12 +23,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-
       - name: Install Fledge
-        run: cargo install fledge --locked --version 1.7.2
+        env:
+          FLEDGE_VERSION: v1.7.2
+        run: |
+          base="https://github.com/CorvidLabs/fledge/releases/download/${FLEDGE_VERSION}"
+          binary="${RUNNER_TEMP}/fledge"
+          checksum="${binary}.sha256"
+
+          curl -fsSL --retry 5 --retry-connrefused --retry-delay 1 +            "${base}/fledge-linux-x86_64" -o "${binary}"
+          curl -fsSL --retry 5 --retry-connrefused --retry-delay 1 +            "${base}/fledge-linux-x86_64.sha256" -o "${checksum}"
+
+          expected="$(awk '{print $1}' "${checksum}")"
+          test -n "${expected}"
+          printf '%s  %s\n' "${expected}" "${binary}" | sha256sum -c -
+          chmod +x "${binary}"
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
 
       - name: Run the catalog verification lane
         run: |
