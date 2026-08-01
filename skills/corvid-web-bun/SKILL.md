@@ -10,16 +10,17 @@ replacement for a repository's `AGENTS.md`, framework conventions, or product sp
 
 ## Start with the project
 
-1. Locate the actual worktree and project-scoped instructions before editing:
+1. Confirm the current public repository and its tracked instructions before editing:
 
    ```sh
-   fledge let find worktrees --scope project --repo <repo> --json
-   fledge let find instructions --scope project --cwd <worktree> --json
+   fledge work status
+   fledge run --list
+   git status --short --branch
+   git ls-files
    ```
 
-   For public-only work, do not use broad context queries that can include user-scoped paths
-   or session metadata. Fall back to public Git and Fledge repository facts when project-only
-   isolation is unavailable.
+   Do not use federated Let discovery in public-only work: Let 0.2 can enumerate user-global
+   or sibling-worktree metadata even for project-scoped queries.
 
 2. Read the project instructions, `package.json`, and the affected spec or component.
 3. Use the Fledge task named by the project. Inspect available tasks if it is unclear:

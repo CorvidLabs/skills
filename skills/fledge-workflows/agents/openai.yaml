@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fledge Workflows"
+  short_description: "Discover and run repository Fledge workflows"
+  default_prompt: "Use -workflows to discover and run the repository's declared workflow."

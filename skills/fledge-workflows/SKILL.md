@@ -18,7 +18,6 @@ fledge --help
 fledge plugins list
 fledge run --help
 fledge lanes --help
-fledge let context --pack brief --cwd . --json
 ```
 
 Use the documented task or lane that matches the change. If no appropriate Fledge task

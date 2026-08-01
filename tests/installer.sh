@@ -14,6 +14,14 @@ mkdir -p "$test_dir/project/subdirectory"
 "$installer" list | grep -qx 'spec-sync'
 "$installer" list | grep -qx 'let'
 "$installer" list | grep -qx 'rune'
+"$installer" list --json | python3 -c '
+import json
+import sys
+
+data = json.load(sys.stdin)
+assert len(data["skills"]) == 15
+assert data["skills"] == sorted(data["skills"])
+'
 for skill in \
     agent-3md \
     atlas \
@@ -87,7 +95,22 @@ if "$installer" install agent-coordination --repo "$manifest_repo" --host codex;
     echo "expected a symlinked manifest to be rejected" >&2
     exit 1
 fi
+if "$installer" status --repo "$manifest_repo"; then
+    echo "expected status to reject a symlinked manifest" >&2
+    exit 1
+fi
 test -L "$manifest_repo/.corvid-skills.json"
+
+invalid_manifest_repo="$test_dir/invalid-manifest-repo"
+mkdir -p "$invalid_manifest_repo"
+git -C "$invalid_manifest_repo" init -q
+printf '{"schema_version":999,"installs":[]}\n' > "$invalid_manifest_repo/.corvid-skills.json"
+if "$installer" install agent-coordination --repo "$invalid_manifest_repo" --host codex --link; then
+    echo "expected an unsupported manifest to reject a link install" >&2
+    exit 1
+fi
+test ! -e "$invalid_manifest_repo/.codex/skills/agent-coordination"
+test ! -L "$invalid_manifest_repo/.codex/skills/agent-coordination"
 
 if "$installer" install ../skills/agent-coordination --repo "$test_dir" --host codex; then
     echo "expected a path-like skill name to be rejected" >&2
@@ -126,6 +149,14 @@ with open(sys.argv[1], "w", encoding="utf-8") as output:
     json.dump(manifest, output)
 PY
 "$installer" status --repo "$unsafe_status_repo" | grep -q $'^atlas\t.*\tmodified$'
+if "$installer" update atlas --repo "$unsafe_status_repo"; then
+    echo "expected update to reject an unsafe manifest destination" >&2
+    exit 1
+fi
+if "$installer" uninstall atlas --repo "$unsafe_status_repo"; then
+    echo "expected uninstall to reject an unsafe manifest destination" >&2
+    exit 1
+fi
 
 dry_run_repo="$test_dir/dry-run-repo"
 mkdir -p "$dry_run_repo"
@@ -146,4 +177,83 @@ grep -q $'^spec-sync\t.*\tcurrent$' <<< "$root_status"
 nested_status="$("$installer" status --repo "$test_dir/project/subdirectory")"
 grep -q $'^spec-sync\t.*\tcurrent$' <<< "$nested_status"
 "$installer" status --repo "$test_dir" | grep -q '^agent-coordination'
+
+status_json="$test_dir/status.json"
+"$installer" status --repo "$test_dir" --json > "$status_json"
+python3 - "$status_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    data = json.load(source)
+assert data["schema_version"] == 1
+assert len(data["installs"]) == 4
+assert {item["state"] for item in data["installs"]} == {"current"}
+PY
+
+lifecycle_source="$test_dir/lifecycle-source"
+lifecycle_repo="$test_dir/lifecycle-repo"
+mkdir -p "$lifecycle_source/bin" "$lifecycle_source/skills" "$lifecycle_repo"
+cp "$installer" "$lifecycle_source/bin/corvid-skills"
+cp -R "$root_dir/skills/augur" "$lifecycle_source/skills/augur"
+cp -R "$root_dir/skills/attest" "$lifecycle_source/skills/attest"
+git -C "$lifecycle_source" init -q
+git -C "$lifecycle_repo" init -q
+lifecycle_installer="$lifecycle_source/bin/corvid-skills"
+"$lifecycle_installer" install augur --repo "$lifecycle_repo" --host codex
+"$lifecycle_installer" install attest --repo "$lifecycle_repo" --host codex
+printf '\nupdated catalog marker\n' >> "$lifecycle_source/skills/augur/SKILL.md"
+"$lifecycle_installer" update augur --repo "$lifecycle_repo" --dry-run
+if grep -q 'updated catalog marker' "$lifecycle_repo/.codex/skills/augur/SKILL.md"; then
+    echo "expected dry-run update not to change installed content" >&2
+    exit 1
+fi
+"$lifecycle_installer" update --all --repo "$lifecycle_repo" --host codex
+grep -q 'updated catalog marker' "$lifecycle_repo/.codex/skills/augur/SKILL.md"
+"$lifecycle_installer" status --repo "$lifecycle_repo" | grep -q $'^augur\t.*\tcurrent$'
+python3 - "$lifecycle_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+augur = next(item for item in manifest["installs"] if item["skill"] == "augur")
+assert augur["updated_at"]
+PY
+
+printf '\nconsumer edit\n' >> "$lifecycle_repo/.codex/skills/augur/SKILL.md"
+if "$lifecycle_installer" update augur --repo "$lifecycle_repo"; then
+    echo "expected update to reject a modified install" >&2
+    exit 1
+fi
+if "$lifecycle_installer" uninstall augur --repo "$lifecycle_repo"; then
+    echo "expected uninstall to reject a modified install" >&2
+    exit 1
+fi
+grep -q 'consumer edit' "$lifecycle_repo/.codex/skills/augur/SKILL.md"
+
+"$lifecycle_installer" uninstall attest --repo "$lifecycle_repo" --dry-run
+test -d "$lifecycle_repo/.codex/skills/attest"
+"$lifecycle_installer" uninstall attest --repo "$lifecycle_repo"
+test ! -e "$lifecycle_repo/.codex/skills/attest"
+python3 - "$lifecycle_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+assert all(item["skill"] != "attest" for item in manifest["installs"])
+PY
+
+link_update_repo="$test_dir/link-update-repo"
+mkdir -p "$link_update_repo"
+git -C "$link_update_repo" init -q
+"$lifecycle_installer" install augur --repo "$link_update_repo" --host claude --link
+printf '\nsecond catalog marker\n' >> "$lifecycle_source/skills/augur/SKILL.md"
+"$lifecycle_installer" status --repo "$link_update_repo" | grep -q $'^augur\t.*\tmodified$'
+"$lifecycle_installer" update augur --repo "$link_update_repo"
+test -L "$link_update_repo/.claude/skills/augur"
+"$lifecycle_installer" status --repo "$link_update_repo" | grep -q $'^augur\t.*\tcurrent$'
+"$lifecycle_installer" uninstall augur --repo "$link_update_repo"
+test ! -e "$link_update_repo/.claude/skills/augur"
 echo "installer tests passed"

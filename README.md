@@ -1,67 +1,127 @@
 # CorvidLabs Skills
 
-Versioned, shared skills for CorvidLabs agents. This repository holds cross-project
-operating knowledge; each product repository keeps its own architecture and generated
-Spec Sync material.
+Public, versioned operating knowledge for software agents working with CorvidLabs tools.
+Each skill is a portable `SKILL.md`; Fledge provides safe repository-local installation,
+status, update, and uninstall commands.
 
-## Initial skills
+Product repositories remain authoritative for their own architecture, commands, and
+generated Spec Sync material.
 
-- `agent-coordination` — use `fledge let` to discover the correct context, then use
-  `fledge rune` only to observe or send a scoped message to that confirmed agent session.
-- `let` — locate the authoritative repository context, worktrees, sessions, instructions,
-  skills, and recent activity before acting.
-- `rune` — safely observe or drive a confirmed CLI-agent session through a bounded PTY.
-- `augur` — inspect deterministic Git change risk and enforce explicit review or block gates.
-- `attest` — verify or record provenance evidence for exact reviewed commits.
-- `atlas` — map specifications to code ownership, drift, review queues, and coverage gaps.
-- `three-md` — author and validate general layered `.3md` documents.
-- `agent-3md` — validate, route, preview, and explicitly execute `agent.3md` tool templates.
-- `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
-  generate a richer local version from its own configuration.
-- `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
-  Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
-- `corvid-web-bun` — build and validate CorvidLabs Bun web projects while deferring
-  framework, architecture, and release policy to the repository-local guides.
-- `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
-- `spec-sync-routing` — route shared guidance to the repo-generated Spec Sync truth.
-- `ci-release-hygiene` — keep CI and release evidence tied to the current commit.
-- `public-release-audit` — audit a private repository before an explicit public-release decision.
+## Quick start
 
-## Install with Fledge
-
-Bootstrap the Skills plugin once:
+Install the catalog plugin, inspect it, and add only the skills a repository needs:
 
 ```sh
 fledge plugins install CorvidLabs/skills
-```
-
-Pin the source to a released tag when a catalog release is available.
-
-Then install a selected skill into the current Git repository:
-
-```sh
 fledge skills list
 fledge skills install agent-coordination --host codex
 fledge skills status
 ```
 
-`--host auto` is supported only when exactly one of the supported repository-local
-host directories already exists. Use `--host` when setting up a new project or
-when more than one host is present. Installs copy by default; `--link` is for
-local skill development only.
+To pin a published catalog release, add its tag to the source, for example:
 
-`status` reports each managed install as `current`, `modified`, or `missing` by comparing
-the recorded digest with safe repository-local placement. A generated Spec Sync skill owns
-`.codex/skills/spec-sync`; do not install the shared skill over it. Install
-`spec-sync-routing` beside generated guidance when shared routing is useful.
+```sh
+fledge plugins install CorvidLabs/skills@v0.2.0
+```
 
-The initial plugin deliberately supports `list`, `install`, and `status` only.
-Safe managed `update` and `uninstall` will follow after their ownership and
-local-modification rules are tested.
+## Catalog
+
+### Coordination and discovery
+
+| Skill | Purpose |
+| --- | --- |
+| `agent-coordination` | Coordinate scoped discovery, Rune, Fledge, and Spec Sync verification. |
+| `let` | Discover local agent context when its federated metadata scope is explicitly permitted. |
+| `rune` | Observe or control a confirmed CLI-agent session through a bounded PTY. |
+| `fledge-workflows` | Discover and use repository-defined Fledge tasks, lanes, plugins, and work commands. |
+
+### Product tools
+
+| Skill | Purpose |
+| --- | --- |
+| `augur` | Inspect deterministic Git change risk and apply explicit review or block gates. |
+| `attest` | Verify or record provenance evidence for exact reviewed commits. |
+| `atlas` | Map specifications to ownership, drift, review queues, and coverage gaps. |
+| `three-md` | Author and validate layered `.3md` documents. |
+| `agent-3md` | Validate, route, preview, and explicitly execute `agent.3md` tool templates. |
+
+### Project engineering
+
+| Skill | Purpose |
+| --- | --- |
+| `spec-sync` | Apply the shared, version-neutral baseline for bidirectional Spec Sync work. |
+| `spec-sync-routing` | Route shared guidance to authoritative repository-generated Spec Sync instructions. |
+| `corvid-swift-package` | Build CorvidLabs Swift packages with Fledge-first, Swift 6, and cross-platform practices. |
+| `corvid-web-bun` | Build and verify local Bun/TypeScript web tools. |
+| `ci-release-hygiene` | Tie CI and release evidence to the exact current commit. |
+| `public-release-audit` | Audit a repository before an explicit public-release decision. |
+
+## Agent compatibility
+
+The skill content is agent-neutral Markdown. Any agent that can load a `SKILL.md` from
+repository context can use it. Fledge currently provides automatic, collision-safe placement
+for these hosts:
+
+| Host | Repository-local destination | Automatic placement |
+| --- | --- | --- |
+| Codex | `.codex/skills/<skill>` | Yes |
+| Claude | `.claude/skills/<skill>` | Yes |
+| Cursor | `.cursor/skills/<skill>` | Yes |
+| Other agents | Agent-defined | No; use the agent's documented skill path. |
+
+Host placement does not translate private context or product-specific assumptions into a skill.
+All catalog content and examples must remain usable from public CorvidLabs sources.
+Fledge lifecycle tracking applies to the three automatic placements; a custom agent path remains
+managed by that agent or by the user.
+
+## Manage installed skills
+
+Installs copy by default. Use `--link` only while developing this catalog locally.
+Every placement is recorded in `.corvid-skills.json` with its source revision, mode,
+destination, and content digest.
+
+```sh
+# Inspect human-readable or machine-readable state.
+fledge skills status
+fledge skills status --json
+
+# Preview, then update one skill or every managed skill.
+fledge skills update augur --dry-run
+fledge skills update --all --dry-run
+fledge skills update --all
+
+# Preview, then remove one manifest-owned skill.
+fledge skills uninstall augur --dry-run
+fledge skills uninstall augur
+```
+
+`status` reports `current`, `modified`, or `missing`. Update and uninstall refuse modified
+or missing copies, so local work is never overwritten or removed. For a manifest-owned link,
+Fledge verifies the exact link target before refreshing metadata or removing the link.
+
+Update the catalog plugin separately when you want newer source content:
+
+```sh
+fledge plugins update fledge-plugin-skills
+fledge skills status
+fledge skills update --all --dry-run
+fledge skills update --all
+```
+
+Use `--host codex`, `--host claude`, or `--host cursor` to select one placement when a skill
+is installed for multiple hosts. `--host auto` is available for install only when exactly one
+supported host directory already exists.
+
+## Spec Sync placement
+
+A project-generated Spec Sync skill owns its repository-local `spec-sync` destination.
+The installer never overwrites an existing directory. Keep generated guidance in place and
+install `spec-sync-routing` beside it when shared routing is useful. This policy does not
+depend on a particular Spec Sync generator version or generated directory layout.
 
 ## Verify the catalog
 
-Use the repository-defined Fledge lanes:
+Run the same Fledge-native checks used by CI:
 
 ```sh
 fledge run --list
@@ -70,30 +130,23 @@ fledge lanes run verify
 fledge lanes run audit
 ```
 
-The verification lane requires Bash, Python 3, and ShellCheck. The audit lane also
-requires Gitleaks and redacts any finding output.
+The verification lane requires Bash, Python 3, and ShellCheck. The audit lane also requires
+Gitleaks and redacts any finding output.
 
-## Direct installer
-
-Install a named skill into a repository-local agent directory:
+The direct installer is available for debugging or environments without plugin dispatch:
 
 ```sh
+bin/corvid-skills list --json
 bin/corvid-skills install agent-coordination --repo /path/to/project --host codex
-bin/corvid-skills install spec-sync --repo /path/to/project --host claude
-```
-
-Supported hosts are `codex`, `claude`, and `cursor`. Installations copy the selected
-skill and record its source revision, destination, install mode, and content digest
-in `.corvid-skills.json`. Existing skill directories are never overwritten.
-
-```sh
-bin/corvid-skills list
-bin/corvid-skills install agent-coordination --repo . --host codex --link
+bin/corvid-skills status --repo /path/to/project --json
+bin/corvid-skills update agent-coordination --repo /path/to/project --dry-run
+bin/corvid-skills uninstall agent-coordination --repo /path/to/project --dry-run
 ```
 
 ## Design rules
 
-- Shared skills teach reusable operating practices.
-- Repo-local skills are authoritative for that repo's commands, architecture, and policy.
-- A generated Spec Sync skill is authoritative and must not be overwritten by the shared baseline.
-- Installer changes are explicit and repository-local by default.
+- Keep one concise skill per tool or workflow; avoid aliases and overlapping boilerplate.
+- Verify real public commands before documenting them.
+- Treat repository-local instructions as authoritative for that repository.
+- Never include private paths, session content, secrets, user metadata, or private-repository assumptions.
+- Make installation and lifecycle mutations explicit, manifest-owned, and repository-local.

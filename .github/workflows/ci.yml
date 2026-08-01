@@ -50,19 +50,46 @@ jobs:
       - name: Install the catalog plugin from this checkout
         run: fledge plugins install . --yes --non-interactive
 
-      - name: Dogfood a repository-local skill install
+      - name: Dogfood the complete catalog lifecycle
         shell: bash
         run: |
-          test_repo="$(mktemp -d)"
-          trap 'rm -rf "$test_repo"' EXIT
-          git -C "$test_repo" init -q
+          test_root="$(mktemp -d)"
+          trap 'rm -rf "$test_root"' EXIT
+          fledge skills list --json > "$test_root/catalog.json"
 
-          fledge skills list | grep -qx 'agent-coordination'
-          fledge skills list | grep -qx 'spec-sync'
-          fledge skills install agent-coordination --repo "$test_repo" --host codex
-          fledge skills install spec-sync --repo "$test_repo" --host codex
-          fledge skills status --repo "$test_repo" | grep -q '^agent-coordination'
-          fledge skills status --repo "$test_repo" | grep -q '^spec-sync'
+          python3 - "$test_root/catalog.json" <<'PY'
+          import json
+          import sys
 
-          test -f "$test_repo/.codex/skills/agent-coordination/SKILL.md"
-          test -f "$test_repo/.codex/skills/spec-sync/SKILL.md"
+          with open(sys.argv[1], encoding="utf-8") as source:
+              catalog = json.load(source)
+          assert len(catalog["skills"]) == 15
+          assert catalog["skills"] == sorted(catalog["skills"])
+          PY
+
+          for host in codex claude cursor; do
+            test_repo="$test_root/$host"
+            mkdir -p "$test_repo"
+            git -C "$test_repo" init -q
+
+            while IFS= read -r skill; do
+              fledge skills install "$skill" --repo "$test_repo" --host "$host"
+            done < <(fledge skills list)
+
+            fledge skills status --repo "$test_repo" --json > "$test_root/$host-status.json"
+            python3 - "$test_root/$host-status.json" "$host" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as source:
+              status = json.load(source)
+          assert len(status["installs"]) == 15
+          assert {item["host"] for item in status["installs"]} == {sys.argv[2]}
+          assert {item["state"] for item in status["installs"]} == {"current"}
+          PY
+
+            fledge skills update --all --repo "$test_repo" --host "$host" --dry-run
+            fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host" --dry-run
+            fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host"
+            test ! -e "$test_repo/.$host/skills/agent-coordination"
+          done
