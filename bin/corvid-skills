@@ -11,10 +11,10 @@ Manage shared CorvidLabs agent skills in one repository.
 
 Usage:
   fledge skills list [--json]
-  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|grok>] [--link] [--dry-run]
+  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|grok|openai>] [--link] [--dry-run]
   fledge skills status [--repo <path>] [--json]
-  fledge skills update <skill>|--all [--repo <path>] [--host <codex|claude|cursor|grok>] [--dry-run]
-  fledge skills uninstall <skill> [--repo <path>] [--host <codex|claude|cursor|grok>] [--dry-run]
+  fledge skills update <skill>|--all [--repo <path>] [--host <codex|claude|cursor|grok|openai>] [--dry-run]
+  fledge skills uninstall <skill> [--repo <path>] [--host <codex|claude|cursor|grok|openai>] [--dry-run]
 
 Install copies a selected skill into a repository-local agent directory and
 records the exact source revision and content digest in .corvid-skills.json.
@@ -39,6 +39,7 @@ host_directory() {
         claude) printf '.claude/skills' ;;
         cursor) printf '.cursor/skills' ;;
         grok) printf '.grok/skills' ;;
+        openai) printf '.openai/skills' ;;
         *) fail "unsupported host: $1" ;;
     esac
 }
@@ -103,7 +104,7 @@ resolve_host() {
 
     local candidates=()
     local host
-    for host in codex claude cursor grok; do
+    for host in codex claude cursor grok openai; do
         [[ -d "$repo/$(host_directory "$host")" ]] && candidates+=("$host")
     done
     if [[ ${#candidates[@]} -eq 1 ]]; then
@@ -111,7 +112,7 @@ resolve_host() {
         return
     fi
     if [[ ${#candidates[@]} -eq 0 ]]; then
-        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, or --host grok"
+        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, --host grok, or --host openai"
     fi
     fail "multiple agent hosts are present (${candidates[*]}); pass --host explicitly"
 }
@@ -237,6 +238,7 @@ expected_destination() {
         claude) printf '.claude/skills/%s' "$skill" ;;
         cursor) printf '.cursor/skills/%s' "$skill" ;;
         grok) printf '.grok/skills/%s' "$skill" ;;
+        openai) printf '.openai/skills/%s' "$skill" ;;
         *) return 1 ;;
     esac
 }

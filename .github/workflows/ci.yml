@@ -66,7 +66,7 @@ jobs:
           assert catalog["skills"] == sorted(catalog["skills"])
           PY
 
-          for host in codex claude cursor grok; do
+          for host in codex claude cursor grok openai; do
             test_repo="$test_root/$host"
             mkdir -p "$test_repo"
             git -C "$test_repo" init -q

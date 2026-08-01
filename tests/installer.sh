@@ -389,4 +389,140 @@ assert project == [], project
 PY
 fi
 
+openai_repo="$test_dir/openai-repo"
+mkdir -p "$openai_repo"
+git -C "$openai_repo" init -q
+"$installer" install agent-coordination --repo "$openai_repo" --host openai
+test -f "$openai_repo/.openai/skills/agent-coordination/SKILL.md"
+"$installer" status --repo "$openai_repo" | grep -q $'^agent-coordination\topenai\t.openai/skills/agent-coordination\t.*\tcopy\tcurrent$'
+python3 - "$openai_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+assert len(manifest["installs"]) == 1
+assert manifest["installs"][0]["host"] == "openai"
+assert manifest["installs"][0]["destination"] == ".openai/skills/agent-coordination"
+PY
+"$installer" uninstall agent-coordination --repo "$openai_repo" --dry-run
+test -d "$openai_repo/.openai/skills/agent-coordination"
+"$installer" uninstall agent-coordination --repo "$openai_repo"
+test ! -e "$openai_repo/.openai/skills/agent-coordination"
+python3 - "$openai_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+assert manifest["installs"] == []
+PY
+
+openai_auto_repo="$test_dir/openai-auto-repo"
+mkdir -p "$openai_auto_repo/.openai/skills"
+git -C "$openai_auto_repo" init -q
+"$installer" install let --repo "$openai_auto_repo" --host auto
+test -f "$openai_auto_repo/.openai/skills/let/SKILL.md"
+"$installer" status --repo "$openai_auto_repo" | grep -q $'^let\topenai\t.openai/skills/let\t.*\tcurrent$'
+
+# Prove OpenAI project placement is visible to Let find skills when Let supports it.
+# This requires a Let version that recognizes .openai/skills roots (CorvidLabs/let#6).
+if command -v fledge >/dev/null 2>&1 && fledge let version >/dev/null 2>&1; then
+    if fledge let find skills --scope project --host openai \
+        --repo "$openai_repo" --cwd "$openai_repo" --json >/dev/null 2>&1; then
+        openai_let_repo="$test_dir/openai-let-repo"
+        mkdir -p "$openai_let_repo"
+        git -C "$openai_let_repo" init -q
+        "$installer" install agent-coordination --repo "$openai_let_repo" --host openai
+        "$installer" install fledge-workflows --repo "$openai_let_repo" --host openai
+        fledge let find skills --scope project --host openai \
+            --repo "$openai_let_repo" --cwd "$openai_let_repo" --json \
+            > "$test_dir/let-find-skills-openai.json"
+        python3 - "$test_dir/let-find-skills-openai.json" "$openai_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+project = []
+for item in payload.get("data", {}).get("items", []):
+    if item.get("scope") != "project" or item.get("host") != "openai":
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+names = {item["name"] for item in project}
+assert names >= {"agent-coordination", "fledge-workflows"}, names
+for item in project:
+    expected = repo / ".openai" / "skills" / item["name"] / "SKILL.md"
+    assert Path(item["path"]).resolve() == expected.resolve(), (item["path"], expected)
+PY
+        fledge let find skills --scope project --host openai \
+            --repo "$openai_let_repo" --cwd "$openai_let_repo" \
+            --query agent-coordination --json \
+            > "$test_dir/let-find-query-agent-coordination-openai.json"
+        python3 - "$test_dir/let-find-query-agent-coordination-openai.json" "$openai_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+project = []
+for item in payload.get("data", {}).get("items", []):
+    if (
+        item.get("scope") != "project"
+        or item.get("host") != "openai"
+        or item.get("name") != "agent-coordination"
+    ):
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+assert len(project) == 1, project
+assert project[0]["path"].endswith(".openai/skills/agent-coordination/SKILL.md")
+PY
+        "$installer" uninstall agent-coordination --repo "$openai_let_repo" --host openai
+        fledge let find skills --scope project --host openai \
+            --repo "$openai_let_repo" --cwd "$openai_let_repo" \
+            --query agent-coordination --json \
+            > "$test_dir/let-find-after-uninstall-openai.json"
+        python3 - "$test_dir/let-find-after-uninstall-openai.json" "$openai_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+project = []
+for item in payload.get("data", {}).get("items", []):
+    if (
+        item.get("scope") != "project"
+        or item.get("host") != "openai"
+        or item.get("name") != "agent-coordination"
+    ):
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+assert project == [], project
+PY
+    else
+        echo "skipping OpenAI Let proof: installed Let does not recognize .openai/skills"
+    fi
+fi
+
 echo "installer tests passed"
