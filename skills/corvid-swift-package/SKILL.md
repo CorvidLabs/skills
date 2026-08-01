@@ -18,10 +18,12 @@ and public API before proposing a change.
 
 ## Preserve package guarantees
 
-- Keep public API explicitly `public`; use the narrowest access elsewhere and document public
-  declarations.
+- Give every declaration an explicit access level (`public`, `internal`, `private`, or
+  `fileprivate`); public API is explicitly `public` and documented.
 - Treat Swift 6 strict concurrency as a design constraint: cross-boundary values are `Sendable`,
-  shared mutable state uses actors, and asynchronous APIs use `async`/`await`.
+  shared mutable state uses actors, and asynchronous APIs use `async`/`await`. Enable it in the
+  package with `swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]` unless the
+  repository's declared Swift toolchain provides the equivalent stricter setting.
 - Do not add force unwraps, `try!`, `as!`, callback APIs, or `@unchecked Sendable` merely to make
   a build pass. Explain and isolate an unavoidable exception in review.
 - Keep targets portable across the package's declared Apple, Linux, and Windows platforms.
