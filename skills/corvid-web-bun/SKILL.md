@@ -10,11 +10,16 @@ replacement for a repository's `AGENTS.md`, framework conventions, or product sp
 
 ## Start with the project
 
-1. Locate the actual worktree and instructions before editing:
+1. Locate the actual worktree and project-scoped instructions before editing:
 
    ```sh
-   fledge let context --pack brief --cwd <worktree> --json
+   fledge let find worktrees --scope project --repo <repo> --json
+   fledge let find instructions --scope project --cwd <worktree> --json
    ```
+
+   For public-only work, do not use broad context queries that can include user-scoped paths
+   or session metadata. Fall back to public Git and Fledge repository facts when project-only
+   isolation is unavailable.
 
 2. Read the project instructions, `package.json`, and the affected spec or component.
 3. Use the Fledge task named by the project. Inspect available tasks if it is unclear:
@@ -29,7 +34,9 @@ defines an authoritative lane.
 
 ## Build with Bun
 
-- Use `bun`, never `npm`, `yarn`, or `pnpm`, for dependencies and scripts.
+- Use Bun for dependencies and scripts when `package.json`, the lockfile, and local instructions
+  declare Bun. Preserve another explicitly selected package manager, especially in workspaces;
+  never introduce a second lockfile merely to apply this baseline.
 - Prefer `Bun.serve()` for a Bun server and Bun's built-in APIs before adding a server
   framework or runtime dependency.
 - Keep TypeScript strict. Model uncertain external values as `unknown`, then validate
@@ -41,19 +48,26 @@ defines an authoritative lane.
 
 ## Change and verify
 
-Implement the smallest complete vertical change: user-visible behavior, accessible UI,
-typed boundary, test coverage, and any canonical spec or documentation the project
-requires. Exercise the real package scripts or Fledge lane, not an invented substitute:
+For an implementation request, make the smallest complete change across only the affected
+layers: user-visible behavior and accessible UI for interface work, typed boundaries for data
+or service work, focused tests, and any canonical spec or documentation the project requires.
+Exercise the real package scripts or Fledge lane, not an invented substitute:
 
 First discover the project's declared Fledge task or lane, then run its exact name. Fall back
 to the repository's Bun scripts only when there is no Fledge equivalent; do not assume every
 project defines `test` or `verify`.
 
 For UI changes, test keyboard navigation, focus behavior, loading/error/empty states,
-and responsive layout where the product supports it. Run and report the project's AXE coverage
-(or add it if none exists), and verify WCAG AA contrast and keyboard focus behavior. Use a
-project-provided visual or end-to-end task when available. Do not claim a browser workflow
-works solely because a TypeScript build passed.
+and responsive layout where the product supports it. Run and report the project's AXE coverage,
+and verify WCAG AA contrast and keyboard focus behavior. Add missing accessibility coverage only
+when implementation is authorized. Use a project-provided visual or end-to-end task when
+available. Do not claim a browser workflow works solely because a TypeScript build passed.
+
+## Review without mutating
+
+For a review-only request, inspect the existing diff and report actionable findings with file
+and line evidence. Do not edit files, add coverage, update specs, or run commands that mutate
+the repository unless the user separately authorizes implementation.
 
 ## Before push
 
