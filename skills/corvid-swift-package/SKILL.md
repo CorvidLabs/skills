@@ -23,9 +23,11 @@ and public API before proposing a change.
   `private`). Use `open` only for externally subclassable or overridable API and `package`
   only for package-scoped implementation API. Public API is explicit and documented. Local
   declarations do not admit access modifiers.
-- Treat Swift 6 strict concurrency as a design constraint: cross-boundary values are `Sendable`,
-  shared mutable state uses actors, and asynchronous APIs use `async`/`await`. For a
-  Swift-5.9-compatible manifest, enable complete checking with
+- Treat Swift 6 strict concurrency as a design constraint. Values shared across isolation
+  domains are `Sendable`; ownership-transferred values may use Swift's `sending` and
+  region-based isolation. Isolate mutable state with actors by default, or use a safe
+  synchronization primitive when the repository's synchronous API requires one. Asynchronous
+  APIs use `async`/`await`. For a Swift-5.9-compatible manifest, enable complete checking with
   `swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]`, but do not treat warnings
   in Swift 5 language mode as a release gate. Require a Swift 6 language-mode build, or an explicit
   warnings-as-errors CI equivalent, so concurrency violations fail verification.
