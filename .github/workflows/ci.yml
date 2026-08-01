@@ -71,6 +71,11 @@ jobs:
             mkdir -p "$test_repo"
             git -C "$test_repo" init -q
 
+            host_root=".$host"
+            if [[ "$host" == "openai" ]]; then
+              host_root=".agents"
+            fi
+
             while IFS= read -r skill; do
               fledge skills install "$skill" --repo "$test_repo" --host "$host"
             done < <(fledge skills list)
@@ -90,7 +95,7 @@ jobs:
             fledge skills update --all --repo "$test_repo" --host "$host" --dry-run
             fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host" --dry-run
             fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host"
-            test ! -e "$test_repo/.$host/skills/agent-coordination"
+            test ! -e "$test_repo/$host_root/skills/agent-coordination"
           done
 
       - name: Prove Grok placement with Let find skills

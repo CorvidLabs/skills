@@ -112,6 +112,36 @@ fi
 test ! -e "$invalid_manifest_repo/.codex/skills/agent-coordination"
 test ! -L "$invalid_manifest_repo/.codex/skills/agent-coordination"
 
+malformed_manifest_repo="$test_dir/malformed-manifest-repo"
+mkdir -p "$malformed_manifest_repo"
+git -C "$malformed_manifest_repo" init -q
+"$installer" install augur --repo "$malformed_manifest_repo" --host codex
+python3 - "$malformed_manifest_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as source:
+    manifest = json.load(source)
+manifest["installs"].append({})
+with open(path, "w", encoding="utf-8") as output:
+    json.dump(manifest, output)
+    output.write("\n")
+PY
+if "$installer" status --repo "$malformed_manifest_repo"; then
+    echo "expected status to reject a manifest with a malformed later entry" >&2
+    exit 1
+fi
+if "$installer" update augur --repo "$malformed_manifest_repo"; then
+    echo "expected update to reject a manifest with a malformed later entry" >&2
+    exit 1
+fi
+if "$installer" uninstall augur --repo "$malformed_manifest_repo"; then
+    echo "expected uninstall to reject a manifest with a malformed later entry" >&2
+    exit 1
+fi
+test -d "$malformed_manifest_repo/.codex/skills/augur"
+
 if "$installer" install ../skills/agent-coordination --repo "$test_dir" --host codex; then
     echo "expected a path-like skill name to be rejected" >&2
     exit 1
@@ -165,6 +195,55 @@ if "$installer" uninstall augur --repo "$extra_entry_repo"; then
     exit 1
 fi
 test -L "$extra_entry_repo/.codex/skills/augur/user-added-link"
+
+mode_change_repo="$test_dir/mode-change-repo"
+mkdir -p "$mode_change_repo"
+git -C "$mode_change_repo" init -q
+"$installer" install augur --repo "$mode_change_repo" --host codex
+chmod +x "$mode_change_repo/.codex/skills/augur/SKILL.md"
+"$installer" status --repo "$mode_change_repo" | grep -q $'^augur\t.*\tmodified$'
+if "$installer" update augur --repo "$mode_change_repo"; then
+    echo "expected update to reject a copied skill with a mode-only change" >&2
+    exit 1
+fi
+if "$installer" uninstall augur --repo "$mode_change_repo"; then
+    echo "expected uninstall to reject a copied skill with a mode-only change" >&2
+    exit 1
+fi
+test -x "$mode_change_repo/.codex/skills/augur/SKILL.md"
+
+legacy_digest_repo="$test_dir/legacy-digest-repo"
+mkdir -p "$legacy_digest_repo"
+git -C "$legacy_digest_repo" init -q
+"$installer" install augur --repo "$legacy_digest_repo" --host codex
+python3 - "$legacy_digest_repo/.corvid-skills.json" "$legacy_digest_repo/.codex/skills/augur" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+skill_root = Path(sys.argv[2])
+entries = []
+for entry in sorted(skill_root.rglob("*"), key=lambda path: f"./{path.relative_to(skill_root).as_posix()}"):
+    relative = f"./{entry.relative_to(skill_root).as_posix()}".encode()
+    if entry.is_dir():
+        entries.append(b"directory\0" + relative + b"\0")
+    else:
+        digest = hashlib.sha256(entry.read_bytes()).hexdigest().encode()
+        entries.append(b"file\0" + relative + b"\0" + digest + b"\0")
+legacy_digest = hashlib.sha256(b"".join(entries)).hexdigest()
+with manifest_path.open(encoding="utf-8") as source:
+    manifest = json.load(source)
+manifest["installs"][0]["content_digest"] = legacy_digest
+with manifest_path.open("w", encoding="utf-8") as output:
+    json.dump(manifest, output, indent=2, sort_keys=True)
+    output.write("\n")
+PY
+"$installer" status --repo "$legacy_digest_repo" | grep -q $'^augur\t.*\tcurrent$'
+"$installer" update augur --repo "$legacy_digest_repo" --dry-run
+chmod +x "$legacy_digest_repo/.codex/skills/augur/SKILL.md"
+"$installer" status --repo "$legacy_digest_repo" | grep -q $'^augur\t.*\tmodified$'
 
 unsafe_status_repo="$test_dir/unsafe-status-repo"
 mkdir -p "$unsafe_status_repo"
@@ -425,8 +504,8 @@ openai_repo="$test_dir/openai-repo"
 mkdir -p "$openai_repo"
 git -C "$openai_repo" init -q
 "$installer" install agent-coordination --repo "$openai_repo" --host openai
-test -f "$openai_repo/.openai/skills/agent-coordination/SKILL.md"
-"$installer" status --repo "$openai_repo" | grep -q $'^agent-coordination\topenai\t.openai/skills/agent-coordination\t.*\tcopy\tcurrent$'
+test -f "$openai_repo/.agents/skills/agent-coordination/SKILL.md"
+"$installer" status --repo "$openai_repo" | grep -q $'^agent-coordination\topenai\t.agents/skills/agent-coordination\t.*\tcopy\tcurrent$'
 python3 - "$openai_repo/.corvid-skills.json" <<'PY'
 import json
 import sys
@@ -435,12 +514,12 @@ with open(sys.argv[1], encoding="utf-8") as source:
     manifest = json.load(source)
 assert len(manifest["installs"]) == 1
 assert manifest["installs"][0]["host"] == "openai"
-assert manifest["installs"][0]["destination"] == ".openai/skills/agent-coordination"
+assert manifest["installs"][0]["destination"] == ".agents/skills/agent-coordination"
 PY
 "$installer" uninstall agent-coordination --repo "$openai_repo" --dry-run
-test -d "$openai_repo/.openai/skills/agent-coordination"
+test -d "$openai_repo/.agents/skills/agent-coordination"
 "$installer" uninstall agent-coordination --repo "$openai_repo"
-test ! -e "$openai_repo/.openai/skills/agent-coordination"
+test ! -e "$openai_repo/.agents/skills/agent-coordination"
 python3 - "$openai_repo/.corvid-skills.json" <<'PY'
 import json
 import sys
@@ -451,110 +530,36 @@ assert manifest["installs"] == []
 PY
 
 openai_auto_repo="$test_dir/openai-auto-repo"
-mkdir -p "$openai_auto_repo/.openai/skills"
+mkdir -p "$openai_auto_repo/.agents/skills"
 git -C "$openai_auto_repo" init -q
 "$installer" install let --repo "$openai_auto_repo" --host auto
-test -f "$openai_auto_repo/.openai/skills/let/SKILL.md"
-"$installer" status --repo "$openai_auto_repo" | grep -q $'^let\topenai\t.openai/skills/let\t.*\tcurrent$'
+test -f "$openai_auto_repo/.agents/skills/let/SKILL.md"
+"$installer" status --repo "$openai_auto_repo" | grep -q $'^let\topenai\t.agents/skills/let\t.*\tcurrent$'
 
-# Prove OpenAI project placement is visible to Let find skills when Let supports it.
-# This requires a Let version that recognizes .openai/skills roots (CorvidLabs/let#6).
-if command -v fledge >/dev/null 2>&1 && fledge let version >/dev/null 2>&1; then
-    if fledge let find skills --scope project --host openai \
-        --repo "$openai_repo" --cwd "$openai_repo" --json >/dev/null 2>&1; then
-        openai_let_repo="$test_dir/openai-let-repo"
-        mkdir -p "$openai_let_repo"
-        git -C "$openai_let_repo" init -q
-        "$installer" install agent-coordination --repo "$openai_let_repo" --host openai
-        "$installer" install fledge-workflows --repo "$openai_let_repo" --host openai
-        fledge let find skills --scope project --host openai \
-            --repo "$openai_let_repo" --cwd "$openai_let_repo" --json \
-            > "$test_dir/let-find-skills-openai.json"
-        python3 - "$test_dir/let-find-skills-openai.json" "$openai_let_repo" <<'PY'
+legacy_openai_repo="$test_dir/legacy-openai-repo"
+mkdir -p "$legacy_openai_repo"
+git -C "$legacy_openai_repo" init -q
+"$installer" install agent-coordination --repo "$legacy_openai_repo" --host openai
+mkdir -p "$legacy_openai_repo/.openai/skills"
+mv "$legacy_openai_repo/.agents/skills/agent-coordination" "$legacy_openai_repo/.openai/skills/agent-coordination"
+python3 - "$legacy_openai_repo/.corvid-skills.json" <<'PY'
 import json
 import sys
-from pathlib import Path
 
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-repo = Path(sys.argv[2]).resolve()
-assert payload.get("ok") is True, payload
-project = []
-for item in payload.get("data", {}).get("items", []):
-    if item.get("scope") != "project" or item.get("host") != "openai":
-        continue
-    path = Path(item.get("path", "")).resolve()
-    try:
-        path.relative_to(repo)
-    except ValueError:
-        continue
-    project.append(item)
-names = {item["name"] for item in project}
-assert names >= {"agent-coordination", "fledge-workflows"}, names
-for item in project:
-    expected = repo / ".openai" / "skills" / item["name"] / "SKILL.md"
-    assert Path(item["path"]).resolve() == expected.resolve(), (item["path"], expected)
+path = sys.argv[1]
+with open(path, encoding="utf-8") as source:
+    manifest = json.load(source)
+manifest["installs"][0]["destination"] = ".openai/skills/agent-coordination"
+with open(path, "w", encoding="utf-8") as output:
+    json.dump(manifest, output, indent=2, sort_keys=True)
+    output.write("\n")
 PY
-        fledge let find skills --scope project --host openai \
-            --repo "$openai_let_repo" --cwd "$openai_let_repo" \
-            --query agent-coordination --json \
-            > "$test_dir/let-find-query-agent-coordination-openai.json"
-        python3 - "$test_dir/let-find-query-agent-coordination-openai.json" "$openai_let_repo" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-repo = Path(sys.argv[2]).resolve()
-assert payload.get("ok") is True, payload
-project = []
-for item in payload.get("data", {}).get("items", []):
-    if (
-        item.get("scope") != "project"
-        or item.get("host") != "openai"
-        or item.get("name") != "agent-coordination"
-    ):
-        continue
-    path = Path(item.get("path", "")).resolve()
-    try:
-        path.relative_to(repo)
-    except ValueError:
-        continue
-    project.append(item)
-assert len(project) == 1, project
-assert project[0]["path"].endswith(".openai/skills/agent-coordination/SKILL.md")
-PY
-        "$installer" uninstall agent-coordination --repo "$openai_let_repo" --host openai
-        fledge let find skills --scope project --host openai \
-            --repo "$openai_let_repo" --cwd "$openai_let_repo" \
-            --query agent-coordination --json \
-            > "$test_dir/let-find-after-uninstall-openai.json"
-        python3 - "$test_dir/let-find-after-uninstall-openai.json" "$openai_let_repo" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-repo = Path(sys.argv[2]).resolve()
-assert payload.get("ok") is True, payload
-project = []
-for item in payload.get("data", {}).get("items", []):
-    if (
-        item.get("scope") != "project"
-        or item.get("host") != "openai"
-        or item.get("name") != "agent-coordination"
-    ):
-        continue
-    path = Path(item.get("path", "")).resolve()
-    try:
-        path.relative_to(repo)
-    except ValueError:
-        continue
-    project.append(item)
-assert project == [], project
-PY
-    else
-        echo "skipping OpenAI Let proof: installed Let does not recognize .openai/skills"
-    fi
+"$installer" status --repo "$legacy_openai_repo" | grep -q $'^agent-coordination\topenai\t.openai/skills/agent-coordination\t.*\tcopy\tlegacy$'
+if "$installer" update agent-coordination --repo "$legacy_openai_repo"; then
+    echo "expected update to reject a legacy OpenAI placement" >&2
+    exit 1
 fi
+"$installer" uninstall agent-coordination --repo "$legacy_openai_repo" --host openai
+test ! -e "$legacy_openai_repo/.openai/skills/agent-coordination"
 
 echo "installer tests passed"

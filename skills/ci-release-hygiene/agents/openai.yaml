@@ -1,4 +1,4 @@
 interface:
   display_name: "CI Release Hygiene"
   short_description: "Tie CI and release evidence to exact commits"
-  default_prompt: "Use -release-hygiene to verify that CI and release evidence matches the current commit."
+  default_prompt: "Use $ci-release-hygiene to verify that CI and release evidence matches the current commit."
