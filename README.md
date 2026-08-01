@@ -67,13 +67,14 @@ for these hosts:
 | Codex | `.codex/skills/<skill>` | Yes |
 | Claude | `.claude/skills/<skill>` | Yes |
 | Cursor | `.cursor/skills/<skill>` | Yes |
+| Gemini | `.gemini/skills/<skill>` | Yes |
 | Grok | `.grok/skills/<skill>` | Yes |
 | OpenAI | `.openai/skills/<skill>` | Yes |
 | Other agents | Agent-defined | No; use the agent's documented skill path. |
 
 Host placement does not translate private context or product-specific assumptions into a skill.
 All catalog content and examples must remain usable from public CorvidLabs sources.
-Fledge lifecycle tracking applies to the five automatic placements; a custom agent path remains
+Fledge lifecycle tracking applies to the six automatic placements; a custom agent path remains
 managed by that agent or by the user.
 
 ## Manage installed skills
@@ -110,9 +111,9 @@ fledge skills update --all --dry-run
 fledge skills update --all
 ```
 
-Use `--host codex`, `--host claude`, `--host cursor`, `--host grok`, or `--host openai` to select
-one placement when a skill is installed for multiple hosts. `--host auto` is available for
-install only when exactly one supported host directory already exists.
+Use `--host codex`, `--host claude`, `--host cursor`, `--host gemini`, `--host grok`, or
+`--host openai` to select one placement when a skill is installed for multiple hosts. `--host auto`
+is available for install only when exactly one supported host directory already exists.
 
 ## Spec Sync placement
 

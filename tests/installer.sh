@@ -124,6 +124,22 @@ git -C "$link_repo" init -q
 test -L "$link_repo/.claude/skills/spec-sync"
 "$installer" status --repo "$link_repo" | grep -q $'^spec-sync\tclaude\t.claude/skills/spec-sync\t.*\tlink\tcurrent$'
 
+gemini_repo="$test_dir/gemini-repo"
+mkdir -p "$gemini_repo/.gemini/skills"
+git -C "$gemini_repo" init -q
+"$installer" install agent-coordination --repo "$gemini_repo" --host auto
+test -f "$gemini_repo/.gemini/skills/agent-coordination/SKILL.md"
+"$installer" status --repo "$gemini_repo" |
+    grep -q $'^agent-coordination\tgemini\t.gemini/skills/agent-coordination\t.*\tcopy\tcurrent$'
+
+gemini_link_repo="$test_dir/gemini-link-repo"
+mkdir -p "$gemini_link_repo"
+git -C "$gemini_link_repo" init -q
+"$installer" install spec-sync --repo "$gemini_link_repo" --host gemini --link
+test -L "$gemini_link_repo/.gemini/skills/spec-sync"
+"$installer" status --repo "$gemini_link_repo" |
+    grep -q $'^spec-sync\tgemini\t.gemini/skills/spec-sync\t.*\tlink\tcurrent$'
+
 status_repo="$test_dir/status-repo"
 mkdir -p "$status_repo"
 git -C "$status_repo" init -q
@@ -133,6 +149,22 @@ printf '\nlocal edit\n' >> "$status_repo/.codex/skills/augur/SKILL.md"
 "$installer" status --repo "$status_repo" | grep -q $'^augur\t.*\tmodified$'
 mv "$status_repo/.codex/skills/augur" "$status_repo/.codex/skills/augur.moved"
 "$installer" status --repo "$status_repo" | grep -q $'^augur\t.*\tmissing$'
+
+extra_entry_repo="$test_dir/extra-entry-repo"
+mkdir -p "$extra_entry_repo"
+git -C "$extra_entry_repo" init -q
+"$installer" install augur --repo "$extra_entry_repo" --host codex
+ln -s "$root_dir/README.md" "$extra_entry_repo/.codex/skills/augur/user-added-link"
+"$installer" status --repo "$extra_entry_repo" | grep -q $'^augur\t.*\tmodified$'
+if "$installer" update augur --repo "$extra_entry_repo"; then
+    echo "expected update to reject a copied skill with an added symlink" >&2
+    exit 1
+fi
+if "$installer" uninstall augur --repo "$extra_entry_repo"; then
+    echo "expected uninstall to reject a copied skill with an added symlink" >&2
+    exit 1
+fi
+test -L "$extra_entry_repo/.codex/skills/augur/user-added-link"
 
 unsafe_status_repo="$test_dir/unsafe-status-repo"
 mkdir -p "$unsafe_status_repo"

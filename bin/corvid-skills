@@ -11,10 +11,10 @@ Manage shared CorvidLabs agent skills in one repository.
 
 Usage:
   fledge skills list [--json]
-  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|grok|openai>] [--link] [--dry-run]
+  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|gemini|grok|openai>] [--link] [--dry-run]
   fledge skills status [--repo <path>] [--json]
-  fledge skills update <skill>|--all [--repo <path>] [--host <codex|claude|cursor|grok|openai>] [--dry-run]
-  fledge skills uninstall <skill> [--repo <path>] [--host <codex|claude|cursor|grok|openai>] [--dry-run]
+  fledge skills update <skill>|--all [--repo <path>] [--host <codex|claude|cursor|gemini|grok|openai>] [--dry-run]
+  fledge skills uninstall <skill> [--repo <path>] [--host <codex|claude|cursor|gemini|grok|openai>] [--dry-run]
 
 Install copies a selected skill into a repository-local agent directory and
 records the exact source revision and content digest in .corvid-skills.json.
@@ -38,6 +38,7 @@ host_directory() {
         codex) printf '.codex/skills' ;;
         claude) printf '.claude/skills' ;;
         cursor) printf '.cursor/skills' ;;
+        gemini) printf '.gemini/skills' ;;
         grok) printf '.grok/skills' ;;
         openai) printf '.openai/skills' ;;
         *) fail "unsupported host: $1" ;;
@@ -84,13 +85,19 @@ ensure_safe_managed_paths() {
     [[ ! -L "$repo/$manifest_name" ]] || fail "refusing symlinked manifest: $repo/$manifest_name"
 }
 
+has_only_regular_entries() {
+    local directory="$1"
+    [[ -d "$directory" && ! -L "$directory" ]] || return 1
+    [[ -z "$(find "$directory" -mindepth 1 ! -type d ! -type f -print -quit)" ]]
+}
+
 validate_skill_source() {
     local skill="$1"
     [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid skill name: $skill"
     [[ -d "$skills_dir/$skill" && ! -L "$skills_dir/$skill" && -f "$skills_dir/$skill/SKILL.md" ]] ||
         fail "unknown skill: $skill"
-    [[ -z "$(find "$skills_dir/$skill" -type l -print -quit)" ]] ||
-        fail "skill contains a symlink: $skill"
+    has_only_regular_entries "$skills_dir/$skill" ||
+        fail "skill contains unsupported filesystem entries: $skill"
 }
 
 resolve_host() {
@@ -104,7 +111,7 @@ resolve_host() {
 
     local candidates=()
     local host
-    for host in codex claude cursor grok openai; do
+    for host in codex claude cursor gemini grok openai; do
         [[ -d "$repo/$(host_directory "$host")" ]] && candidates+=("$host")
     done
     if [[ ${#candidates[@]} -eq 1 ]]; then
@@ -112,20 +119,23 @@ resolve_host() {
         return
     fi
     if [[ ${#candidates[@]} -eq 0 ]]; then
-        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, --host grok, or --host openai"
+        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, --host gemini, --host grok, or --host openai"
     fi
     fail "multiple agent hosts are present (${candidates[*]}); pass --host explicitly"
 }
 
 directory_digest() {
     local directory="$1"
+    has_only_regular_entries "$directory" || return 1
     (
         cd "$directory"
-        find . -type f -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' file; do
-            if command -v shasum >/dev/null 2>&1; then
-                shasum -a 256 "$file"
+        find . -mindepth 1 -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' entry; do
+            if [[ -d "$entry" ]]; then
+                printf 'directory\0%s\0' "$entry"
+            elif command -v shasum >/dev/null 2>&1; then
+                printf 'file\0%s\0%s\0' "$entry" "$(shasum -a 256 "$entry" | awk '{print $1}')"
             else
-                sha256sum "$file"
+                printf 'file\0%s\0%s\0' "$entry" "$(sha256sum "$entry" | awk '{print $1}')"
             fi
         done
     ) | if command -v shasum >/dev/null 2>&1; then
@@ -237,6 +247,7 @@ expected_destination() {
         codex) printf '.codex/skills/%s' "$skill" ;;
         claude) printf '.claude/skills/%s' "$skill" ;;
         cursor) printf '.cursor/skills/%s' "$skill" ;;
+        gemini) printf '.gemini/skills/%s' "$skill" ;;
         grok) printf '.grok/skills/%s' "$skill" ;;
         openai) printf '.openai/skills/%s' "$skill" ;;
         *) return 1 ;;
@@ -269,16 +280,24 @@ entry_state() {
 
     if [[ "$install_mode" == "link" && -L "$destination" ]]; then
         if [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]; then
-            local actual_digest
-            actual_digest="$(directory_digest "$skills_dir/$skill")"
-            [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+            if has_only_regular_entries "$skills_dir/$skill"; then
+                local actual_digest
+                actual_digest="$(directory_digest "$skills_dir/$skill")"
+                [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+            else
+                printf 'modified'
+            fi
         else
             printf 'modified'
         fi
     elif [[ "$install_mode" == "copy" && -d "$destination" && ! -L "$destination" ]]; then
-        local actual_digest
-        actual_digest="$(directory_digest "$destination")"
-        [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+        if has_only_regular_entries "$destination"; then
+            local actual_digest
+            actual_digest="$(directory_digest "$destination")"
+            [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+        else
+            printf 'modified'
+        fi
     elif [[ -e "$destination" || -L "$destination" ]]; then
         printf 'modified'
     else
