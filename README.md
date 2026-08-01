@@ -20,6 +20,8 @@ Spec Sync material.
   generate a richer local version from its own configuration.
 - `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
   Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
+- `corvid-web-bun` — build and validate CorvidLabs Bun web projects while deferring
+  framework, architecture, and release policy to the repository-local guides.
 - `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
 - `spec-sync-routing` — route shared guidance to the repo-generated Spec Sync truth.
 - `ci-release-hygiene` — keep CI and release evidence tied to the current commit.

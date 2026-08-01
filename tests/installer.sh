@@ -21,6 +21,7 @@ for skill in \
     augur \
     ci-release-hygiene \
     corvid-swift-package \
+    corvid-web-bun \
     fledge-workflows \
     public-release-audit \
     spec-sync-routing \
