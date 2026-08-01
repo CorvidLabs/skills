@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec Sync"
+  short_description: "Keep project specifications and code synchronized"
+  default_prompt: "Use -sync to keep this change and its project specifications synchronized."

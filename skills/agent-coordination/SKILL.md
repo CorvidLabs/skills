@@ -10,21 +10,27 @@ worktree for an agent task.
 
 ## Discover first
 
-Use `fledge let` to establish the facts before acting:
+For public-only work, establish facts from the confirmed repository without invoking Let's
+federated discovery:
 
 ```sh
-fledge let find worktrees --scope project --repo <repo> --json
-fledge let find instructions --scope project --cwd <worktree> --json
-fledge let history --scope project --cwd <worktree> --json
+fledge work status
+fledge run --list
+git status --short --branch
+git ls-files
 ```
 
-Confirm the repository, worktree, branch, sibling worktrees, applicable instructions, and
-latest agent session. Do not infer ownership from a branch name alone. Session metadata is an
-activity hint, not proof that work is delivered: compare it with the worktree, commits, pull
-request, CI, and sandbox.
+Read only tracked instructions and declared workflows. Do not infer ownership from a branch
+name alone. Session metadata is an activity hint, not proof that work is delivered: compare it
+with the worktree, commits, pull request, CI, and sandbox.
 
-For public-only work, avoid broad Let context queries that can include user-scoped path
-metadata. Keep discovery project-scoped and rooted at a confirmed public repository.
+Let 0.2 can return user-global or sibling-worktree metadata even for project-scoped queries.
+Do not invoke it in a public-only workflow until the installed version is independently verified
+to isolate the requested repository. Mark the Let step blocked and continue with public
+repository evidence; do not filter private results after they have already been read.
+
+When local agent metadata is explicitly authorized, use `fledge let --help` to select the
+narrowest supported query and treat every returned path or session identifier as private.
 
 ## Observe by default
 
@@ -69,7 +75,7 @@ Spec Sync failure must not be hidden by approving or rewriting scope without the
 
 After a prompt is accepted, verify the worktree, declared Fledge workflow, Spec Sync evidence,
 and CI again; delivery is not completion. If
-the target session or worktree is wrong, stop and rediscover it with Let. If a provider or
+the target session or worktree is wrong, stop and rediscover it within the task's privacy scope. If a provider or
 network connection fails, Rune cannot bypass it—report the boundary and rely on repository
 evidence. Assign one worktree and responsibility per agent, and use sibling-worktree context
 to avoid overlapping edits. For repeated CI failures, reproduce narrowly and add or confirm a

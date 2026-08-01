@@ -5,45 +5,48 @@ description: Discover authoritative CorvidLabs agent, session, worktree, instruc
 
 # Let Discovery
 
-Use `fledge let` before selecting a worktree, resuming an agent, reporting status, or
-installing a skill. Let is a locator and read-only context source; it does not expose an
-agent's private live reasoning and it does not deliver prompts.
+Let is a locator and read-only context source; it does not expose an agent's private live
+reasoning and it does not deliver prompts. Use it only when the task permits discovery of
+local agent metadata.
 
 ## Public-only boundary
 
-Read-only does not mean public-safe. Broad `where` or context queries can report user-scoped
-instruction paths or other local metadata. For public-only work, use explicit `--scope project`
-queries rooted at a confirmed public repository, ignore or redact user-scope records, and never
-publish local paths or session metadata. If the installed Let version cannot isolate project
-scope for a query, use public Git and Fledge repository facts instead.
+Read-only does not mean public-safe. Let 0.2 discovery is federated: even a `--scope project`
+query can enumerate user-global instructions or sibling-worktree paths. `doctor`, `where`,
+`context`, `find`, `history`, and skill routing can therefore touch local metadata outside the
+public repository.
+
+Do not invoke Let in a public-only workflow unless the installed version has been independently
+verified to isolate the requested repository. Never rely on filtering or redaction after a broad
+query, because the private metadata has already been read. Use repository-local Git and Fledge
+facts instead, and report the Let discovery step as blocked by its current isolation boundary.
 
 ## Start with the local facts
 
-Run the health check and resolve the target from a concrete path or repository:
+For public-only work, stay within the confirmed repository:
 
 ```sh
-fledge let doctor --json
-fledge let where <path> --json
-fledge let context --pack brief --cwd <worktree> --json
+fledge work status
+fledge run --list
+git status --short --branch
+git ls-files
 ```
 
-Confirm the repository root, current worktree, branch, sibling worktrees, and applicable
-instructions. Do not infer ownership from a branch name or a stale session title.
+Read only tracked repository instructions and declared workflows. Do not inspect sibling
+worktrees, user-level agent directories, sessions, or global instruction roots. Do not infer
+ownership from a branch name or a stale session title.
 
 ## Find the right asset
 
-Use structured output when another agent or tool will consume the result:
+When local metadata discovery is explicitly in scope, inspect the installed command surface
+before selecting the narrowest query:
 
 ```sh
-fledge let find sessions --scope project --repo <repo> --json
-fledge let find worktrees --scope project --repo <repo> --json
-fledge let find instructions --scope project --cwd <worktree> --json
-fledge let history --scope project --cwd <worktree> --json
-fledge let skill route "<task>" --json
+fledge let --help
 ```
 
-Use `show` to inspect a specific returned identifier. Prefer a brief context pack unless a
-task genuinely needs all instructions; excessive context is a coordination failure.
+Prefer an exact identifier over a broad context pack. Treat returned paths and session metadata
+as private unless their public provenance is independently established.
 
 ## Freshness and limits
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Coordination"
+  short_description: "Coordinate agents from discovery to verification"
+  default_prompt: "Use -coordination to safely coordinate this agent workflow from discovery through verification."

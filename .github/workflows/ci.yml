@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -50,19 +49,120 @@ jobs:
       - name: Install the catalog plugin from this checkout
         run: fledge plugins install . --yes --non-interactive
 
-      - name: Dogfood a repository-local skill install
+      - name: Dogfood the complete catalog lifecycle
         shell: bash
         run: |
-          test_repo="$(mktemp -d)"
-          trap 'rm -rf "$test_repo"' EXIT
+          test_root="$(mktemp -d)"
+          trap 'rm -rf "$test_root"' EXIT
+          fledge skills list --json > "$test_root/catalog.json"
+
+          python3 - "$test_root/catalog.json" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as source:
+              catalog = json.load(source)
+          assert len(catalog["skills"]) == 15
+          assert catalog["skills"] == sorted(catalog["skills"])
+          PY
+
+          for host in codex claude cursor gemini grok openai; do
+            test_repo="$test_root/$host"
+            mkdir -p "$test_repo"
+            git -C "$test_repo" init -q
+
+            while IFS= read -r skill; do
+              fledge skills install "$skill" --repo "$test_repo" --host "$host"
+            done < <(fledge skills list)
+
+            fledge skills status --repo "$test_repo" --json > "$test_root/$host-status.json"
+            python3 - "$test_root/$host-status.json" "$host" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as source:
+              status = json.load(source)
+          assert len(status["installs"]) == 15
+          assert {item["host"] for item in status["installs"]} == {sys.argv[2]}
+          assert {item["state"] for item in status["installs"]} == {"current"}
+          PY
+
+            fledge skills update --all --repo "$test_repo" --host "$host" --dry-run
+            fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host" --dry-run
+            fledge skills uninstall agent-coordination --repo "$test_repo" --host "$host"
+            test ! -e "$test_repo/.$host/skills/agent-coordination"
+          done
+
+      - name: Prove Grok placement with Let find skills
+        shell: bash
+        run: |
+          # Let’s fledge plugin build hook requires Bun.
+          curl -fsSL https://bun.sh/install | bash
+          export BUN_INSTALL="${HOME}/.bun"
+          export PATH="${BUN_INSTALL}/bin:${PATH}"
+          command -v bun
+          bun --version
+          fledge plugins install CorvidLabs/let@v0.2.0 --yes --non-interactive
+          test_repo="$(mktemp -d)/grok-let"
+          mkdir -p "$test_repo"
           git -C "$test_repo" init -q
+          fledge skills install agent-coordination --repo "$test_repo" --host grok
+          fledge skills install fledge-workflows --repo "$test_repo" --host grok
+          fledge let find skills --scope project --host grok \
+            --repo "$test_repo" --cwd "$test_repo" --json \
+            > /tmp/let-find-skills-grok.json
+          python3 - "$test_repo" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
 
-          fledge skills list | grep -qx 'agent-coordination'
-          fledge skills list | grep -qx 'spec-sync'
-          fledge skills install agent-coordination --repo "$test_repo" --host codex
-          fledge skills install spec-sync --repo "$test_repo" --host codex
-          fledge skills status --repo "$test_repo" | grep -q '^agent-coordination'
-          fledge skills status --repo "$test_repo" | grep -q '^spec-sync'
+          repo = Path(sys.argv[1]).resolve()
+          payload = json.loads(Path("/tmp/let-find-skills-grok.json").read_text(encoding="utf-8"))
+          assert payload.get("ok") is True, payload
+          project = []
+          for item in payload.get("data", {}).get("items", []):
+              if item.get("scope") != "project" or item.get("host") != "grok":
+                  continue
+              path = Path(item.get("path", "")).resolve()
+              try:
+                  path.relative_to(repo)
+              except ValueError:
+                  continue
+              project.append(item)
+          names = {item["name"] for item in project}
+          assert names >= {"agent-coordination", "fledge-workflows"}, names
+          for item in project:
+              expected = repo / ".grok" / "skills" / item["name"] / "SKILL.md"
+              assert Path(item["path"]).resolve() == expected.resolve()
+          print("let find skills proof ok:", sorted(names))
+          PY
+          fledge skills uninstall agent-coordination --repo "$test_repo" --host grok
+          test ! -e "$test_repo/.grok/skills/agent-coordination"
+          fledge let find skills --scope project --host grok \
+            --repo "$test_repo" --cwd "$test_repo" \
+            --query agent-coordination --json \
+            > /tmp/let-find-after-uninstall.json
+          python3 - "$test_repo" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
 
-          test -f "$test_repo/.codex/skills/agent-coordination/SKILL.md"
-          test -f "$test_repo/.codex/skills/spec-sync/SKILL.md"
+          repo = Path(sys.argv[1]).resolve()
+          payload = json.loads(Path("/tmp/let-find-after-uninstall.json").read_text(encoding="utf-8"))
+          assert payload.get("ok") is True, payload
+          project = []
+          for item in payload.get("data", {}).get("items", []):
+              if (
+                  item.get("scope") != "project"
+                  or item.get("host") != "grok"
+                  or item.get("name") != "agent-coordination"
+              ):
+                  continue
+              try:
+                  Path(item.get("path", "")).resolve().relative_to(repo)
+              except ValueError:
+                  continue
+              project.append(item)
+          assert not project, project
+          print("let post-uninstall proof ok")
+          PY

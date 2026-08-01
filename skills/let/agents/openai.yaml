@@ -1,0 +1,4 @@
+interface:
+  display_name: "Let Discovery"
+  short_description: "Discover authorized local agent context safely"
+  default_prompt: "Use $let to discover only the local agent context permitted by this task."

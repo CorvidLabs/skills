@@ -10,13 +10,17 @@ usage() {
 Manage shared CorvidLabs agent skills in one repository.
 
 Usage:
-  fledge skills list
-  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor>] [--link] [--dry-run]
-  fledge skills status [--repo <path>]
+  fledge skills list [--json]
+  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor|gemini|grok|openai>] [--link] [--dry-run]
+  fledge skills status [--repo <path>] [--json]
+  fledge skills update <skill>|--all [--repo <path>] [--host <codex|claude|cursor|gemini|grok|openai>] [--dry-run]
+  fledge skills uninstall <skill> [--repo <path>] [--host <codex|claude|cursor|gemini|grok|openai>] [--dry-run]
 
 Install copies a selected skill into a repository-local agent directory and
 records the exact source revision and content digest in .corvid-skills.json.
 It never overwrites an existing directory.
+
+Update and uninstall operate only on unmodified managed copies or exact manifest-owned links.
 EOF
 }
 
@@ -34,6 +38,9 @@ host_directory() {
         codex) printf '.codex/skills' ;;
         claude) printf '.claude/skills' ;;
         cursor) printf '.cursor/skills' ;;
+        gemini) printf '.gemini/skills' ;;
+        grok) printf '.grok/skills' ;;
+        openai) printf '.openai/skills' ;;
         *) fail "unsupported host: $1" ;;
     esac
 }
@@ -59,13 +66,38 @@ ensure_safe_install_paths() {
     [[ ! -L "$repo/$manifest_name" ]] || fail "refusing symlinked manifest: $repo/$manifest_name"
 }
 
+ensure_safe_managed_paths() {
+    local repo="$1"
+    local destination_rel="$2"
+    local install_mode="$3"
+    local current="$repo"
+    local components=()
+    local index
+
+    IFS='/' read -r -a components <<< "$destination_rel"
+    for ((index = 0; index < ${#components[@]} - 1; index++)); do
+        current="$current/${components[$index]}"
+        [[ ! -L "$current" ]] || fail "refusing symlinked managed path: $current"
+    done
+    if [[ "$install_mode" == "copy" ]]; then
+        [[ ! -L "$repo/$destination_rel" ]] || fail "refusing symlinked managed copy: $repo/$destination_rel"
+    fi
+    [[ ! -L "$repo/$manifest_name" ]] || fail "refusing symlinked manifest: $repo/$manifest_name"
+}
+
+has_only_regular_entries() {
+    local directory="$1"
+    [[ -d "$directory" && ! -L "$directory" ]] || return 1
+    [[ -z "$(find "$directory" -mindepth 1 ! -type d ! -type f -print -quit)" ]]
+}
+
 validate_skill_source() {
     local skill="$1"
     [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid skill name: $skill"
     [[ -d "$skills_dir/$skill" && ! -L "$skills_dir/$skill" && -f "$skills_dir/$skill/SKILL.md" ]] ||
         fail "unknown skill: $skill"
-    [[ -z "$(find "$skills_dir/$skill" -type l -print -quit)" ]] ||
-        fail "skill contains a symlink: $skill"
+    has_only_regular_entries "$skills_dir/$skill" ||
+        fail "skill contains unsupported filesystem entries: $skill"
 }
 
 resolve_host() {
@@ -79,7 +111,7 @@ resolve_host() {
 
     local candidates=()
     local host
-    for host in codex claude cursor; do
+    for host in codex claude cursor gemini grok openai; do
         [[ -d "$repo/$(host_directory "$host")" ]] && candidates+=("$host")
     done
     if [[ ${#candidates[@]} -eq 1 ]]; then
@@ -87,20 +119,23 @@ resolve_host() {
         return
     fi
     if [[ ${#candidates[@]} -eq 0 ]]; then
-        fail "cannot infer an agent host; pass --host codex, --host claude, or --host cursor"
+        fail "cannot infer an agent host; pass --host codex, --host claude, --host cursor, --host gemini, --host grok, or --host openai"
     fi
     fail "multiple agent hosts are present (${candidates[*]}); pass --host explicitly"
 }
 
 directory_digest() {
     local directory="$1"
+    has_only_regular_entries "$directory" || return 1
     (
         cd "$directory"
-        find . -type f -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' file; do
-            if command -v shasum >/dev/null 2>&1; then
-                shasum -a 256 "$file"
+        find . -mindepth 1 -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' entry; do
+            if [[ -d "$entry" ]]; then
+                printf 'directory\0%s\0' "$entry"
+            elif command -v shasum >/dev/null 2>&1; then
+                printf 'file\0%s\0%s\0' "$entry" "$(shasum -a 256 "$entry" | awk '{print $1}')"
             else
-                sha256sum "$file"
+                printf 'file\0%s\0%s\0' "$entry" "$(sha256sum "$entry" | awk '{print $1}')"
             fi
         done
     ) | if command -v shasum >/dev/null 2>&1; then
@@ -111,7 +146,21 @@ directory_digest() {
 }
 
 list_skills() {
-    find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | LC_ALL=C sort
+    local json="false"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --json) json="true"; shift ;;
+            *) fail "unknown option: $1" ;;
+        esac
+    done
+    if [[ "$json" == "true" ]]; then
+        require_python
+        find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; |
+            LC_ALL=C sort |
+            python3 -c 'import json, sys; print(json.dumps({"skills": [line.rstrip("\n") for line in sys.stdin]}))'
+    else
+        find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | LC_ALL=C sort
+    fi
 }
 
 write_manifest_entry() {
@@ -165,6 +214,158 @@ finally:
 PY
 }
 
+manifest_rows() {
+    local manifest="$1"
+    require_python
+    python3 - "$manifest" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    data = json.load(source)
+if data.get("schema_version") != 1 or not isinstance(data.get("installs"), list):
+    raise SystemExit(f"unsupported managed-skills manifest: {sys.argv[1]}")
+for item in data["installs"]:
+    fields = (
+        item["skill"],
+        item["host"],
+        item["destination"],
+        item["source_revision"],
+        item["install_mode"],
+        item.get("content_digest", ""),
+    )
+    if any("\t" in str(field) or "\n" in str(field) for field in fields):
+        raise SystemExit("invalid control character in managed-skills manifest")
+    print("\t".join(str(field) for field in fields))
+PY
+}
+
+expected_destination() {
+    local skill="$1"
+    local host="$2"
+    case "$host" in
+        codex) printf '.codex/skills/%s' "$skill" ;;
+        claude) printf '.claude/skills/%s' "$skill" ;;
+        cursor) printf '.cursor/skills/%s' "$skill" ;;
+        gemini) printf '.gemini/skills/%s' "$skill" ;;
+        grok) printf '.grok/skills/%s' "$skill" ;;
+        openai) printf '.openai/skills/%s' "$skill" ;;
+        *) return 1 ;;
+    esac
+}
+
+entry_state() {
+    local repo="$1"
+    local skill="$2"
+    local host="$3"
+    local destination_rel="$4"
+    local install_mode="$5"
+    local expected_digest="$6"
+    local expected_rel=""
+    local destination="$repo/$destination_rel"
+    local current="$repo"
+    local components=()
+    local index
+
+    [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { printf 'modified'; return; }
+    expected_rel="$(expected_destination "$skill" "$host" 2>/dev/null || true)"
+    [[ -n "$expected_rel" && "$destination_rel" == "$expected_rel" ]] || { printf 'modified'; return; }
+    [[ "$install_mode" == "copy" || "$install_mode" == "link" ]] || { printf 'modified'; return; }
+
+    IFS='/' read -r -a components <<< "$destination_rel"
+    for ((index = 0; index < ${#components[@]} - 1; index++)); do
+        current="$current/${components[$index]}"
+        [[ ! -L "$current" ]] || { printf 'modified'; return; }
+    done
+
+    if [[ "$install_mode" == "link" && -L "$destination" ]]; then
+        if [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]; then
+            if has_only_regular_entries "$skills_dir/$skill"; then
+                local actual_digest
+                actual_digest="$(directory_digest "$skills_dir/$skill")"
+                [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+            else
+                printf 'modified'
+            fi
+        else
+            printf 'modified'
+        fi
+    elif [[ "$install_mode" == "copy" && -d "$destination" && ! -L "$destination" ]]; then
+        if has_only_regular_entries "$destination"; then
+            local actual_digest
+            actual_digest="$(directory_digest "$destination")"
+            [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+        else
+            printf 'modified'
+        fi
+    elif [[ -e "$destination" || -L "$destination" ]]; then
+        printf 'modified'
+    else
+        printf 'missing'
+    fi
+}
+
+managed_link_is_owned() {
+    local repo="$1"
+    local skill="$2"
+    local destination_rel="$3"
+    local destination="$repo/$destination_rel"
+
+    [[ -L "$destination" ]] || return 1
+    [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]
+}
+
+mutate_manifest_entry() {
+    local action="$1"
+    local manifest="$2"
+    local skill="$3"
+    local host="$4"
+    local revision="${5:-}"
+    local digest="${6:-}"
+    require_python
+    python3 - "$action" "$manifest" "$skill" "$host" "$revision" "$digest" <<'PY'
+import datetime
+import json
+import os
+import sys
+import tempfile
+
+action, manifest, skill, host, revision, digest = sys.argv[1:]
+with open(manifest, encoding="utf-8") as source:
+    data = json.load(source)
+if data.get("schema_version") != 1 or not isinstance(data.get("installs"), list):
+    raise SystemExit(f"unsupported managed-skills manifest: {manifest}")
+matches = [item for item in data["installs"] if item.get("skill") == skill and item.get("host") == host]
+if len(matches) != 1:
+    raise SystemExit(f"expected one managed install for {skill} on {host}, found {len(matches)}")
+if action == "update":
+    matches[0]["source_revision"] = revision
+    matches[0]["content_digest"] = digest
+    matches[0]["updated_at"] = (
+        datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+elif action == "remove":
+    data["installs"] = [
+        item for item in data["installs"]
+        if not (item.get("skill") == skill and item.get("host") == host)
+    ]
+else:
+    raise SystemExit(f"unsupported manifest mutation: {action}")
+fd, temporary = tempfile.mkstemp(prefix=".corvid-skills.", dir=os.path.dirname(manifest) or ".")
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as output:
+        json.dump(data, output, indent=2, sort_keys=True)
+        output.write("\n")
+    os.replace(temporary, manifest)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
 install_skill() {
     local skill="$1"
     shift
@@ -193,7 +394,7 @@ install_skill() {
     ensure_safe_install_paths "$repo" "$destination_rel"
     [[ ! -e "$destination" && ! -L "$destination" ]] || fail "destination already exists: $destination"
 
-    revision="$(git -C "$root_dir" rev-parse HEAD 2>/dev/null || printf 'working-tree')"
+    revision="$(git -C "$root_dir" rev-parse --verify HEAD 2>/dev/null || printf 'working-tree')"
     digest="$(directory_digest "$skills_dir/$skill")"
     if [[ "$dry_run" == "true" ]]; then
         local requested_mode="copy"
@@ -206,7 +407,10 @@ install_skill() {
     mkdir -p "$(dirname "$destination")"
     if [[ "$link" == "true" ]]; then
         ln -s "$skills_dir/$skill" "$destination"
-        write_manifest_entry "$manifest" "$skill" "$host" "$destination_rel" "link" "$revision" "$digest"
+        if ! write_manifest_entry "$manifest" "$skill" "$host" "$destination_rel" "link" "$revision" "$digest"; then
+            rm -f -- "$destination"
+            exit 1
+        fi
     else
         local temporary="${destination}.tmp.$$"
         cp -R "$skills_dir/$skill" "$temporary"
@@ -219,68 +423,185 @@ install_skill() {
     printf 'Installed %s for %s at %s (revision %s)\n' "$skill" "$host" "$destination" "$revision"
 }
 
-status_skills() {
+update_skills() {
+    [[ $# -ge 1 ]] || fail "update needs a skill name or --all"
+    local requested="$1"
+    shift
     local repo_arg="."
+    local host_filter=""
+    local dry_run="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --repo) [[ $# -ge 2 ]] || fail "--repo needs a path"; repo_arg="$2"; shift 2 ;;
+            --host) [[ $# -ge 2 ]] || fail "--host needs a value"; host_filter="$2"; shift 2 ;;
+            --dry-run) dry_run="true"; shift ;;
+            *) fail "unknown option: $1" ;;
+        esac
+    done
+    [[ "$requested" == "--all" || "$requested" =~ ^[a-z0-9][a-z0-9-]*$ ]] ||
+        fail "invalid skill name: $requested"
+    [[ -z "$host_filter" ]] || host_directory "$host_filter" >/dev/null
+
+    local repo manifest revision
+    repo="$(repository_root "$repo_arg")"
+    manifest="$repo/$manifest_name"
+    [[ -f "$manifest" && ! -L "$manifest" ]] || fail "managed-skills manifest not found: $manifest"
+    revision="$(git -C "$root_dir" rev-parse --verify HEAD 2>/dev/null || printf 'working-tree')"
+    local records=()
+    local row
+    while IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest; do
+        [[ "$requested" == "--all" || "$skill" == "$requested" ]] || continue
+        [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
+        printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
+            "$skill" "$host" "$destination_rel" "$old_revision" "$install_mode" "$expected_digest"
+        records+=("$row")
+    done < <(manifest_rows "$manifest")
+    [[ ${#records[@]} -gt 0 ]] || fail "no matching managed skills are installed"
+
+    local record skill host destination_rel old_revision install_mode expected_digest state
+    for record in "${records[@]}"; do
+        IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest <<< "$record"
+        validate_skill_source "$skill"
+        [[ "$destination_rel" == "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]] ||
+            fail "refusing unsafe manifest destination: $destination_rel"
+        ensure_safe_managed_paths "$repo" "$destination_rel" "$install_mode"
+        state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
+        if [[ "$install_mode" == "link" ]]; then
+            managed_link_is_owned "$repo" "$skill" "$destination_rel" ||
+                fail "refusing to update $skill on $host: managed link was changed or removed"
+        else
+            [[ "$state" == "current" ]] || fail "refusing to update $skill on $host: state is $state"
+        fi
+    done
+
+    local destination new_digest temporary backup
+    for record in "${records[@]}"; do
+        IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest <<< "$record"
+        destination="$repo/$destination_rel"
+        new_digest="$(directory_digest "$skills_dir/$skill")"
+        if [[ "$dry_run" == "true" ]]; then
+            printf 'Would update %s for %s at %s to revision %s\n' "$skill" "$host" "$destination" "$revision"
+            continue
+        fi
+        if [[ "$install_mode" == "link" ]]; then
+            mutate_manifest_entry update "$manifest" "$skill" "$host" "$revision" "$new_digest"
+        else
+            temporary="${destination}.update.$$"
+            backup="${destination}.backup.$$"
+            [[ ! -e "$temporary" && ! -L "$temporary" && ! -e "$backup" && ! -L "$backup" ]] ||
+                fail "temporary update path already exists for $skill on $host"
+            cp -R "$skills_dir/$skill" "$temporary"
+            mv "$destination" "$backup"
+            mv "$temporary" "$destination"
+            if ! mutate_manifest_entry update "$manifest" "$skill" "$host" "$revision" "$new_digest"; then
+                rm -rf -- "$destination"
+                mv "$backup" "$destination"
+                exit 1
+            fi
+            rm -rf -- "$backup"
+        fi
+        printf 'Updated %s for %s at %s to revision %s\n' "$skill" "$host" "$destination" "$revision"
+    done
+}
+
+uninstall_skill() {
+    [[ $# -ge 1 ]] || fail "uninstall needs a skill name"
+    local requested="$1"
+    shift
+    [[ "$requested" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid skill name: $requested"
+    local repo_arg="."
+    local host_filter=""
+    local dry_run="false"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --repo) [[ $# -ge 2 ]] || fail "--repo needs a path"; repo_arg="$2"; shift 2 ;;
+            --host) [[ $# -ge 2 ]] || fail "--host needs a value"; host_filter="$2"; shift 2 ;;
+            --dry-run) dry_run="true"; shift ;;
+            *) fail "unknown option: $1" ;;
+        esac
+    done
+    [[ -z "$host_filter" ]] || host_directory "$host_filter" >/dev/null
+
+    local repo manifest
+    repo="$(repository_root "$repo_arg")"
+    manifest="$repo/$manifest_name"
+    [[ -f "$manifest" && ! -L "$manifest" ]] || fail "managed-skills manifest not found: $manifest"
+    local records=()
+    local row
+    while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
+        [[ "$skill" == "$requested" ]] || continue
+        [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
+        printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
+            "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$expected_digest"
+        records+=("$row")
+    done < <(manifest_rows "$manifest")
+    [[ ${#records[@]} -gt 0 ]] || fail "no matching managed skill is installed: $requested"
+
+    local record skill host destination_rel revision install_mode expected_digest state
+    for record in "${records[@]}"; do
+        IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest <<< "$record"
+        [[ "$destination_rel" == "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]] ||
+            fail "refusing unsafe manifest destination: $destination_rel"
+        ensure_safe_managed_paths "$repo" "$destination_rel" "$install_mode"
+        state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
+        if [[ "$install_mode" == "link" ]]; then
+            managed_link_is_owned "$repo" "$skill" "$destination_rel" ||
+                fail "refusing to uninstall $skill on $host: managed link was changed or removed"
+        else
+            [[ "$state" == "current" ]] || fail "refusing to uninstall $skill on $host: state is $state"
+        fi
+    done
+
+    local destination temporary
+    for record in "${records[@]}"; do
+        IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest <<< "$record"
+        destination="$repo/$destination_rel"
+        if [[ "$dry_run" == "true" ]]; then
+            printf 'Would uninstall %s for %s from %s\n' "$skill" "$host" "$destination"
+            continue
+        fi
+        temporary="${destination}.remove.$$"
+        [[ ! -e "$temporary" && ! -L "$temporary" ]] || fail "temporary removal path already exists for $skill on $host"
+        mv "$destination" "$temporary"
+        if ! mutate_manifest_entry remove "$manifest" "$skill" "$host"; then
+            mv "$temporary" "$destination"
+            exit 1
+        fi
+        if [[ -L "$temporary" || -f "$temporary" ]]; then
+            rm -f -- "$temporary"
+        else
+            rm -rf -- "$temporary"
+        fi
+        printf 'Uninstalled %s for %s from %s\n' "$skill" "$host" "$destination"
+    done
+}
+
+status_skills() {
+    local repo_arg="."
+    local json="false"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --repo) [[ $# -ge 2 ]] || fail "--repo needs a path"; repo_arg="$2"; shift 2 ;;
+            --json) json="true"; shift ;;
             *) fail "unknown option: $1" ;;
         esac
     done
     local repo manifest
     repo="$(repository_root "$repo_arg")"
     manifest="$repo/$manifest_name"
+    [[ ! -L "$manifest" ]] || fail "refusing symlinked manifest: $manifest"
     if [[ ! -f "$manifest" ]]; then
-        echo "No managed CorvidLabs skills are installed in $repo"
+        if [[ "$json" == "true" ]]; then
+            printf '{"schema_version":1,"installs":[]}\n'
+        else
+            echo "No managed CorvidLabs skills are installed in $repo"
+        fi
         return
     fi
-    require_python
     local status_output=""
     while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
-        local destination="$repo/$destination_rel"
-        local state="missing"
-        local safe_manifest="true"
-        local expected_destination_rel=""
-        local unsafe_parent="false"
-        local current="$repo"
-        local components=()
-        local index
-        case "$host" in
-            codex) expected_destination_rel=".codex/skills/$skill" ;;
-            claude) expected_destination_rel=".claude/skills/$skill" ;;
-            cursor) expected_destination_rel=".cursor/skills/$skill" ;;
-            *) safe_manifest="false" ;;
-        esac
-        [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || safe_manifest="false"
-        [[ "$destination_rel" == "$expected_destination_rel" ]] || safe_manifest="false"
-        if [[ "$safe_manifest" == "true" ]]; then
-            IFS='/' read -r -a components <<< "$destination_rel"
-            for ((index = 0; index < ${#components[@]} - 1; index++)); do
-                current="$current/${components[$index]}"
-                if [[ -L "$current" ]]; then
-                    unsafe_parent="true"
-                    break
-                fi
-            done
-        fi
-
-        if [[ "$safe_manifest" != "true" || "$unsafe_parent" == "true" ]]; then
-            state="modified"
-        elif [[ "$install_mode" == "link" && -L "$destination" ]]; then
-            if [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]; then
-                local actual_digest
-                actual_digest="$(directory_digest "$skills_dir/$skill")"
-                [[ "$actual_digest" == "$expected_digest" ]] && state="current" || state="modified"
-            else
-                state="modified"
-            fi
-        elif [[ -d "$destination" && ! -L "$destination" ]]; then
-            local actual_digest
-            actual_digest="$(directory_digest "$destination")"
-            [[ "$actual_digest" == "$expected_digest" ]] && state="current" || state="modified"
-        elif [[ -e "$destination" || -L "$destination" ]]; then
-            state="modified"
-        fi
+        local state
+        state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
         local status_line
         printf -v status_line '%s\t%s\t%s\t%s\t%s\t%s' \
             "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$state"
@@ -288,32 +609,36 @@ status_skills() {
             status_output+=$'\n'
         fi
         status_output+="$status_line"
-    done < <(python3 - "$manifest" <<'PY'
+    done < <(manifest_rows "$manifest")
+    if [[ "$json" == "true" ]]; then
+        { [[ -z "$status_output" ]] || printf '%s\n' "$status_output"; } | python3 -c '
 import json
 import sys
-with open(sys.argv[1], encoding="utf-8") as source:
-    data = json.load(source)
-for item in data.get("installs", []):
-    fields = (
-        item["skill"],
-        item["host"],
-        item["destination"],
-        item["source_revision"],
-        item["install_mode"],
-        item.get("content_digest", ""),
-    )
-    if any("\t" in str(field) or "\n" in str(field) for field in fields):
-        raise SystemExit("invalid control character in managed-skills manifest")
-    print("\t".join(str(field) for field in fields))
-PY
-    )
-    [[ -z "$status_output" ]] || printf '%s\n' "$status_output"
+
+installs = []
+for line in sys.stdin:
+    skill, host, destination, revision, mode, state = line.rstrip("\n").split("\t")
+    installs.append({
+        "skill": skill,
+        "host": host,
+        "destination": destination,
+        "source_revision": revision,
+        "install_mode": mode,
+        "state": state,
+    })
+print(json.dumps({"schema_version": 1, "installs": installs}, sort_keys=True))
+'
+    else
+        [[ -z "$status_output" ]] || printf '%s\n' "$status_output"
+    fi
 }
 
 case "${1:-}" in
-    list) [[ $# -eq 1 ]] || fail "list accepts no options"; list_skills ;;
+    list) list_skills "${@:2}" ;;
     install) [[ $# -ge 2 ]] || { usage; exit 2; }; install_skill "$2" "${@:3}" ;;
     status) status_skills "${@:2}" ;;
+    update) [[ $# -ge 2 ]] || { usage; exit 2; }; update_skills "$2" "${@:3}" ;;
+    uninstall) [[ $# -ge 2 ]] || { usage; exit 2; }; uninstall_skill "$2" "${@:3}" ;;
     -h|--help|help|'') usage ;;
     *) fail "unknown command: $1" ;;
 esac
