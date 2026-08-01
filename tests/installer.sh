@@ -10,11 +10,17 @@ git -C "$test_dir" init -q
 mkdir -p "$test_dir/.codex/skills"
 
 "$installer" list | grep -qx 'agent-coordination'
+"$installer" list | grep -qx 'let'
+"$installer" list | grep -qx 'rune'
 "$installer" install agent-coordination --repo "$test_dir" --host auto
 "$installer" install spec-sync --repo "$test_dir" --host codex
+"$installer" install let --repo "$test_dir" --host codex
+"$installer" install rune --repo "$test_dir" --host codex
 
 test -f "$test_dir/.codex/skills/agent-coordination/SKILL.md"
 test -f "$test_dir/.codex/skills/spec-sync/SKILL.md"
+test -f "$test_dir/.codex/skills/let/SKILL.md"
+test -f "$test_dir/.codex/skills/rune/SKILL.md"
 python3 - "$test_dir/.corvid-skills.json" <<'PY'
 import json
 import sys
@@ -26,6 +32,8 @@ assert manifest["schema_version"] == 1
 assert manifest["source"] == "CorvidLabs/skills"
 assert {entry["skill"] for entry in manifest["installs"]} == {
     "agent-coordination",
+    "let",
+    "rune",
     "spec-sync",
 }
 assert all(entry["content_digest"] for entry in manifest["installs"])
