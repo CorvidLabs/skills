@@ -256,4 +256,41 @@ test -L "$link_update_repo/.claude/skills/augur"
 "$lifecycle_installer" status --repo "$link_update_repo" | grep -q $'^augur\t.*\tcurrent$'
 "$lifecycle_installer" uninstall augur --repo "$link_update_repo"
 test ! -e "$link_update_repo/.claude/skills/augur"
+
+grok_repo="$test_dir/grok-repo"
+mkdir -p "$grok_repo"
+git -C "$grok_repo" init -q
+"$installer" install agent-coordination --repo "$grok_repo" --host grok
+test -f "$grok_repo/.grok/skills/agent-coordination/SKILL.md"
+"$installer" status --repo "$grok_repo" | grep -q $'^agent-coordination\tgrok\t.grok/skills/agent-coordination\t.*\tcopy\tcurrent$'
+python3 - "$grok_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+assert len(manifest["installs"]) == 1
+assert manifest["installs"][0]["host"] == "grok"
+assert manifest["installs"][0]["destination"] == ".grok/skills/agent-coordination"
+PY
+"$installer" uninstall agent-coordination --repo "$grok_repo" --dry-run
+test -d "$grok_repo/.grok/skills/agent-coordination"
+"$installer" uninstall agent-coordination --repo "$grok_repo"
+test ! -e "$grok_repo/.grok/skills/agent-coordination"
+python3 - "$grok_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+assert manifest["installs"] == []
+PY
+
+grok_auto_repo="$test_dir/grok-auto-repo"
+mkdir -p "$grok_auto_repo/.grok/skills"
+git -C "$grok_auto_repo" init -q
+"$installer" install let --repo "$grok_auto_repo" --host auto
+test -f "$grok_auto_repo/.grok/skills/let/SKILL.md"
+"$installer" status --repo "$grok_auto_repo" | grep -q $'^let\tgrok\t.grok/skills/let\t.*\tcurrent$'
+
 echo "installer tests passed"
