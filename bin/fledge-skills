@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fledge runs plugin commands through a shared bin directory. This variable is
+# the stable way for a plugin to find its own checked-out source directory.
+plugin_dir="${FLEDGE_PLUGIN_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+exec "$plugin_dir/bin/corvid-skills" "$@"
