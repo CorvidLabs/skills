@@ -293,4 +293,100 @@ git -C "$grok_auto_repo" init -q
 test -f "$grok_auto_repo/.grok/skills/let/SKILL.md"
 "$installer" status --repo "$grok_auto_repo" | grep -q $'^let\tgrok\t.grok/skills/let\t.*\tcurrent$'
 
+# Prove Grok project placement is visible to Let find skills when Let is available.
+# Let 0.2 may still federate user-global skills; only project-scope rows are asserted.
+if command -v fledge >/dev/null 2>&1 && fledge let version >/dev/null 2>&1; then
+    grok_let_repo="$test_dir/grok-let-repo"
+    mkdir -p "$grok_let_repo"
+    git -C "$grok_let_repo" init -q
+    "$installer" install agent-coordination --repo "$grok_let_repo" --host grok
+    "$installer" install fledge-workflows --repo "$grok_let_repo" --host grok
+    fledge let find skills --scope project --host grok \
+        --repo "$grok_let_repo" --cwd "$grok_let_repo" --json \
+        > "$test_dir/let-find-skills-grok.json"
+    python3 - "$test_dir/let-find-skills-grok.json" "$grok_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+items = payload.get("data", {}).get("items", [])
+project = []
+for item in items:
+    if item.get("scope") != "project" or item.get("host") != "grok":
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+names = {item["name"] for item in project}
+assert names >= {"agent-coordination", "fledge-workflows"}, names
+for item in project:
+    expected = repo / ".grok" / "skills" / item["name"] / "SKILL.md"
+    assert Path(item["path"]).resolve() == expected.resolve(), (item["path"], expected)
+PY
+    fledge let find skills --scope project --host grok \
+        --repo "$grok_let_repo" --cwd "$grok_let_repo" \
+        --query agent-coordination --json \
+        > "$test_dir/let-find-query-agent-coordination.json"
+    python3 - "$test_dir/let-find-query-agent-coordination.json" "$grok_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+project = []
+for item in payload.get("data", {}).get("items", []):
+    if (
+        item.get("scope") != "project"
+        or item.get("host") != "grok"
+        or item.get("name") != "agent-coordination"
+    ):
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+assert len(project) == 1, project
+assert project[0]["path"].endswith(".grok/skills/agent-coordination/SKILL.md")
+PY
+    "$installer" uninstall agent-coordination --repo "$grok_let_repo" --host grok
+    fledge let find skills --scope project --host grok \
+        --repo "$grok_let_repo" --cwd "$grok_let_repo" \
+        --query agent-coordination --json \
+        > "$test_dir/let-find-after-uninstall.json"
+    python3 - "$test_dir/let-find-after-uninstall.json" "$grok_let_repo" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+repo = Path(sys.argv[2]).resolve()
+assert payload.get("ok") is True, payload
+project = []
+for item in payload.get("data", {}).get("items", []):
+    if (
+        item.get("scope") != "project"
+        or item.get("host") != "grok"
+        or item.get("name") != "agent-coordination"
+    ):
+        continue
+    path = Path(item.get("path", "")).resolve()
+    try:
+        path.relative_to(repo)
+    except ValueError:
+        continue
+    project.append(item)
+assert project == [], project
+PY
+fi
+
 echo "installer tests passed"
