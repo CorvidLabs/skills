@@ -14,7 +14,17 @@ mkdir -p "$test_dir/project/subdirectory"
 "$installer" list | grep -qx 'spec-sync'
 "$installer" list | grep -qx 'let'
 "$installer" list | grep -qx 'rune'
-for skill in fledge-workflows spec-sync-routing ci-release-hygiene public-release-audit; do
+for skill in \
+    agent-3md \
+    atlas \
+    attest \
+    augur \
+    ci-release-hygiene \
+    fledge-workflows \
+    public-release-audit \
+    spec-sync-routing \
+    three-md
+do
     "$installer" list | grep -qx "$skill"
     skill_repo="$test_dir/$skill"
     mkdir -p "$skill_repo"
@@ -87,7 +97,33 @@ mkdir -p "$link_repo"
 git -C "$link_repo" init -q
 "$installer" install spec-sync --repo "$link_repo" --host claude --link
 test -L "$link_repo/.claude/skills/spec-sync"
-"$installer" status --repo "$link_repo" | grep -q $'^spec-sync\tclaude\t.claude/skills/spec-sync\t.*\tlink$'
+"$installer" status --repo "$link_repo" | grep -q $'^spec-sync\tclaude\t.claude/skills/spec-sync\t.*\tlink\tcurrent$'
+
+status_repo="$test_dir/status-repo"
+mkdir -p "$status_repo"
+git -C "$status_repo" init -q
+"$installer" install augur --repo "$status_repo" --host codex
+"$installer" status --repo "$status_repo" | grep -q $'^augur\t.*\tcurrent$'
+printf '\nlocal edit\n' >> "$status_repo/.codex/skills/augur/SKILL.md"
+"$installer" status --repo "$status_repo" | grep -q $'^augur\t.*\tmodified$'
+mv "$status_repo/.codex/skills/augur" "$status_repo/.codex/skills/augur.moved"
+"$installer" status --repo "$status_repo" | grep -q $'^augur\t.*\tmissing$'
+
+unsafe_status_repo="$test_dir/unsafe-status-repo"
+mkdir -p "$unsafe_status_repo"
+git -C "$unsafe_status_repo" init -q
+"$installer" install atlas --repo "$unsafe_status_repo" --host codex
+python3 - "$unsafe_status_repo/.corvid-skills.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+manifest["installs"][0]["destination"] = "../../outside"
+with open(sys.argv[1], "w", encoding="utf-8") as output:
+    json.dump(manifest, output)
+PY
+"$installer" status --repo "$unsafe_status_repo" | grep -q $'^atlas\t.*\tmodified$'
 
 dry_run_repo="$test_dir/dry-run-repo"
 mkdir -p "$dry_run_repo"
@@ -103,6 +139,8 @@ git -C "$spaced_repo" init -q
 test -f "$spaced_repo/.codex/skills/agent-coordination/SKILL.md"
 "$installer" status --repo "$spaced_repo/nested directory" | grep -q '^agent-coordination'
 
-"$installer" status --repo "$test_dir" | grep -q '^spec-sync'
-"$installer" status --repo "$test_dir/project/subdirectory" | grep -q '^spec-sync'
+root_status="$("$installer" status --repo "$test_dir")"
+grep -q $'^spec-sync\t.*\tcurrent$' <<< "$root_status"
+nested_status="$("$installer" status --repo "$test_dir/project/subdirectory")"
+grep -q $'^spec-sync\t.*\tcurrent$' <<< "$nested_status"
 echo "installer tests passed"

@@ -103,7 +103,11 @@ directory_digest() {
                 sha256sum "$file"
             fi
         done
-    ) | if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'; else sha256sum | awk '{print $1}'; fi
+    ) | if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{print $1}'
+    else
+        sha256sum | awk '{print $1}'
+    fi
 }
 
 list_skills() {
@@ -143,7 +147,10 @@ data["installs"].append({
     "install_mode": mode,
     "source_revision": revision,
     "content_digest": digest,
-    "installed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    "installed_at": datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
 })
 directory = os.path.dirname(manifest) or "."
 fd, temporary = tempfile.mkstemp(prefix=".corvid-skills.", dir=directory)
@@ -189,7 +196,10 @@ install_skill() {
     revision="$(git -C "$root_dir" rev-parse HEAD 2>/dev/null || printf 'working-tree')"
     digest="$(directory_digest "$skills_dir/$skill")"
     if [[ "$dry_run" == "true" ]]; then
-        printf 'Would install %s for %s at %s (%s, revision %s)\n' "$skill" "$host" "$destination" "$([[ "$link" == true ]] && echo link || echo copy)" "$revision"
+        local requested_mode="copy"
+        [[ "$link" == "true" ]] && requested_mode="link"
+        printf 'Would install %s for %s at %s (%s, revision %s)\n' \
+            "$skill" "$host" "$destination" "$requested_mode" "$revision"
         return
     fi
 
@@ -225,14 +235,72 @@ status_skills() {
         return
     fi
     require_python
-    python3 - "$manifest" <<'PY'
+    while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
+        local destination="$repo/$destination_rel"
+        local state="missing"
+        local safe_manifest="true"
+        local expected_destination_rel=""
+        local unsafe_parent="false"
+        local current="$repo"
+        local components=()
+        local index
+        case "$host" in
+            codex) expected_destination_rel=".codex/skills/$skill" ;;
+            claude) expected_destination_rel=".claude/skills/$skill" ;;
+            cursor) expected_destination_rel=".cursor/skills/$skill" ;;
+            *) safe_manifest="false" ;;
+        esac
+        [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || safe_manifest="false"
+        [[ "$destination_rel" == "$expected_destination_rel" ]] || safe_manifest="false"
+        if [[ "$safe_manifest" == "true" ]]; then
+            IFS='/' read -r -a components <<< "$destination_rel"
+            for ((index = 0; index < ${#components[@]} - 1; index++)); do
+                current="$current/${components[$index]}"
+                if [[ -L "$current" ]]; then
+                    unsafe_parent="true"
+                    break
+                fi
+            done
+        fi
+
+        if [[ "$safe_manifest" != "true" || "$unsafe_parent" == "true" ]]; then
+            state="modified"
+        elif [[ "$install_mode" == "link" && -L "$destination" ]]; then
+            if [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]; then
+                local actual_digest
+                actual_digest="$(directory_digest "$skills_dir/$skill")"
+                [[ "$actual_digest" == "$expected_digest" ]] && state="current" || state="modified"
+            else
+                state="modified"
+            fi
+        elif [[ -d "$destination" && ! -L "$destination" ]]; then
+            local actual_digest
+            actual_digest="$(directory_digest "$destination")"
+            [[ "$actual_digest" == "$expected_digest" ]] && state="current" || state="modified"
+        elif [[ -e "$destination" || -L "$destination" ]]; then
+            state="modified"
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$state"
+    done < <(python3 - "$manifest" <<'PY'
 import json
 import sys
 with open(sys.argv[1], encoding="utf-8") as source:
     data = json.load(source)
 for item in data.get("installs", []):
-    print(f"{item['skill']}\t{item['host']}\t{item['destination']}\t{item['source_revision']}\t{item['install_mode']}")
+    fields = (
+        item["skill"],
+        item["host"],
+        item["destination"],
+        item["source_revision"],
+        item["install_mode"],
+        item.get("content_digest", ""),
+    )
+    if any("\t" in str(field) or "\n" in str(field) for field in fields):
+        raise SystemExit("invalid control character in managed-skills manifest")
+    print("\t".join(str(field) for field in fields))
 PY
+    )
 }
 
 case "${1:-}" in

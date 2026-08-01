@@ -36,6 +36,13 @@ old accepted record.
 
 ## Project-specific generation
 
-When a repository provides a Spec Sync skill generator, generate or refresh its local
-skill after installing this shared baseline. The generated skill is authoritative for
-that repository's command syntax, policy, and module layout.
+The catalog entry and a repository-generated Codex skill both use the path
+`.codex/skills/spec-sync`. Do not install this shared entry over an existing generated skill,
+and do not install it first when generation will immediately replace it. In an initialized
+repository, prefer the generated local skill and install the non-colliding
+`spec-sync-routing` catalog skill when shared routing guidance is useful.
+
+Run `specsync --version` and read the generated local skill before selecting commands. Public
+documentation on the default branch may describe an unreleased version; the installed binary
+and generated skill are authoritative for supported verbs. Refresh generated guidance only
+with that installed version's documented command, then inspect the resulting diff.

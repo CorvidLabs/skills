@@ -1,0 +1,4 @@
+interface:
+  display_name: "Attest Provenance"
+  short_description: "Record and verify reviewed commit provenance"
+  default_prompt: "Use $attest to verify or record provenance for this exact commit."
