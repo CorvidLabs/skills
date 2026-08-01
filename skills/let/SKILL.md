@@ -9,6 +9,14 @@ Use `fledge let` before selecting a worktree, resuming an agent, reporting statu
 installing a skill. Let is a locator and read-only context source; it does not expose an
 agent's private live reasoning and it does not deliver prompts.
 
+## Public-only boundary
+
+Read-only does not mean public-safe. Broad `where` or context queries can report user-scoped
+instruction paths or other local metadata. For public-only work, use explicit `--scope project`
+queries rooted at a confirmed public repository, ignore or redact user-scope records, and never
+publish local paths or session metadata. If the installed Let version cannot isolate project
+scope for a query, use public Git and Fledge repository facts instead.
+
 ## Start with the local facts
 
 Run the health check and resolve the target from a concrete path or repository:

@@ -15,8 +15,9 @@ canonical specs before choosing commands or editing lifecycle files. Use the sha
 are authoritative for that repository's command syntax, paths, policy, and validation.
 
 If the repository can generate or refresh its local Spec Sync skill, do that after
-installing this shared catalog entry. Do not overwrite or silently replace its local
-material with shared text.
+installing this non-colliding routing entry. Do not install the shared `spec-sync` catalog
+entry over `.codex/skills/spec-sync`; that path is owned by generated local guidance. Do not
+overwrite or silently replace generated local material with shared text.
 
 ## Route workflow questions
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent 3md"
+  short_description: "Validate, route, and safely run agent.3md skills"
+  default_prompt: "Use $agent-3md to validate or route a request through this agent.3md file."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atlas Spec Map"
+  short_description: "Inspect spec ownership, drift, and coverage"
+  default_prompt: "Use $atlas to inspect this repository’s spec ownership and coverage."

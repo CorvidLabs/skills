@@ -11,8 +11,15 @@ Spec Sync material.
 - `let` — locate the authoritative repository context, worktrees, sessions, instructions,
   skills, and recent activity before acting.
 - `rune` — safely observe or drive a confirmed CLI-agent session through a bounded PTY.
+- `augur` — inspect deterministic Git change risk and enforce explicit review or block gates.
+- `attest` — verify or record provenance evidence for exact reviewed commits.
+- `atlas` — map specifications to code ownership, drift, review queues, and coverage gaps.
+- `three-md` — author and validate general layered `.3md` documents.
+- `agent-3md` — validate, route, preview, and explicitly execute `agent.3md` tool templates.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
+- `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
+  Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
 - `corvid-web-bun` — build and validate CorvidLabs Bun web projects while deferring
   framework, architecture, and release policy to the repository-local guides.
 - `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
@@ -42,6 +49,11 @@ fledge skills status
 host directories already exists. Use `--host` when setting up a new project or
 when more than one host is present. Installs copy by default; `--link` is for
 local skill development only.
+
+`status` reports each managed install as `current`, `modified`, or `missing` by comparing
+the recorded digest with safe repository-local placement. A generated Spec Sync skill owns
+`.codex/skills/spec-sync`; do not install the shared skill over it. Install
+`spec-sync-routing` beside generated guidance when shared routing is useful.
 
 The initial plugin deliberately supports `list`, `install`, and `status` only.
 Safe managed `update` and `uninstall` will follow after their ownership and
@@ -83,5 +95,5 @@ bin/corvid-skills install agent-coordination --repo . --host codex --link
 
 - Shared skills teach reusable operating practices.
 - Repo-local skills are authoritative for that repo's commands, architecture, and policy.
-- A generated Spec Sync skill supplements this baseline; it does not overwrite it silently.
+- A generated Spec Sync skill is authoritative and must not be overwritten by the shared baseline.
 - Installer changes are explicit and repository-local by default.
