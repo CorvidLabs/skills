@@ -1,6 +1,6 @@
 ---
 name: corvid-swift-package
-description: Build, review, test, and release CorvidLabs Swift packages with Fledge-first discovery, Swift 6 concurrency, and cross-platform discipline.
+description: Build and release CorvidLabs Swift packages with Fledge-first, Swift 6, and cross-platform discipline.
 ---
 
 # CorvidLabs Swift Package
@@ -18,12 +18,15 @@ and public API before proposing a change.
 
 ## Preserve package guarantees
 
-- Give every declaration an explicit access level (`public`, `internal`, `private`, or
-  `fileprivate`); public API is explicitly `public` and documented.
+- Give every type, extension, member, and other declaration that admits access control an
+  explicit level (`public`, `internal`, `private`, or `fileprivate`); public API is
+  explicitly `public` and documented. Local declarations do not admit access modifiers.
 - Treat Swift 6 strict concurrency as a design constraint: cross-boundary values are `Sendable`,
-  shared mutable state uses actors, and asynchronous APIs use `async`/`await`. Enable it in the
-  package with `swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]` unless the
-  repository's declared Swift toolchain provides the equivalent stricter setting.
+  shared mutable state uses actors, and asynchronous APIs use `async`/`await`. For a
+  Swift-5.9-compatible manifest, enable complete checking with
+  `swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]`, but do not treat warnings
+  in Swift 5 language mode as a release gate. Require a Swift 6 language-mode build, or an explicit
+  warnings-as-errors CI equivalent, so concurrency violations fail verification.
 - Do not add force unwraps, `try!`, `as!`, callback APIs, or `@unchecked Sendable` merely to make
   a build pass. Explain and isolate an unavoidable exception in review.
 - Keep targets portable across the package's declared Apple, Linux, and Windows platforms.
