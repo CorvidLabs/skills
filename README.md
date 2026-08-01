@@ -8,18 +8,27 @@ Spec Sync material.
 
 - `agent-coordination` — use `fledge let` to discover the correct context, then use
   `fledge rune` only to observe or send a scoped message to that confirmed agent session.
+- `let` — locate the authoritative repository context, worktrees, sessions, instructions,
+  skills, and recent activity before acting.
+- `rune` — safely observe or drive a confirmed CLI-agent session through a bounded PTY.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
 - `corvid-swift-package` — the shared operating baseline for CorvidLabs Swift packages:
   Fledge-first discovery, Swift 6 concurrency, cross-platform support, and release hygiene.
+- `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
+- `spec-sync-routing` — route shared guidance to the repo-generated Spec Sync truth.
+- `ci-release-hygiene` — keep CI and release evidence tied to the current commit.
+- `public-release-audit` — audit a private repository before an explicit public-release decision.
 
 ## Install with Fledge
 
-Bootstrap the private Skills plugin once, preferably at a released tag:
+Bootstrap the Skills plugin once:
 
 ```sh
-fledge plugins install CorvidLabs/skills@v0.1.0
+fledge plugins install CorvidLabs/skills
 ```
+
+Pin the source to a released tag when a catalog release is available.
 
 Then install a selected skill into the current Git repository:
 
@@ -37,6 +46,20 @@ local skill development only.
 The initial plugin deliberately supports `list`, `install`, and `status` only.
 Safe managed `update` and `uninstall` will follow after their ownership and
 local-modification rules are tested.
+
+## Verify the catalog
+
+Use the repository-defined Fledge lanes:
+
+```sh
+fledge run --list
+fledge lanes validate . --strict
+fledge lanes run verify
+fledge lanes run audit
+```
+
+The verification lane requires Bash, Python 3, and ShellCheck. The audit lane also
+requires Gitleaks and redacts any finding output.
 
 ## Direct installer
 
