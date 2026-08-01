@@ -1,6 +1,6 @@
 ---
 name: fledge-workflows
-description: Discover and run repository-defined Fledge work, verification, and release workflows without guessing commands.
+description: Discover and run repository-defined Fledge workflows without guessing commands.
 ---
 
 # Fledge Workflows
