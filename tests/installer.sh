@@ -14,6 +14,14 @@ mkdir -p "$test_dir/project/subdirectory"
 "$installer" list | grep -qx 'spec-sync'
 "$installer" list | grep -qx 'let'
 "$installer" list | grep -qx 'rune'
+for skill in fledge-workflows spec-sync-routing ci-release-hygiene public-release-audit; do
+    "$installer" list | grep -qx "$skill"
+    skill_repo="$test_dir/$skill"
+    mkdir -p "$skill_repo"
+    git -C "$skill_repo" init -q
+    "$installer" install "$skill" --repo "$skill_repo" --host codex
+    test -f "$skill_repo/.codex/skills/$skill/SKILL.md"
+done
 "$installer" install agent-coordination --repo "$test_dir/project/subdirectory" --host auto
 "$installer" install spec-sync --repo "$test_dir" --host codex
 "$installer" install let --repo "$test_dir" --host codex
