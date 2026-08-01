@@ -10,6 +10,10 @@ Spec Sync material.
   `fledge rune` only to observe or send a scoped message to that confirmed agent session.
 - `spec-sync` — the shared baseline for bidirectional Spec Sync work. A project may
   generate a richer local version from its own configuration.
+- `fledge-workflows` — discover and use repository-defined Fledge tasks and lanes.
+- `spec-sync-routing` — route shared guidance to the repo-generated Spec Sync truth.
+- `ci-release-hygiene` — keep CI and release evidence tied to the current commit.
+- `public-release-audit` — audit a private repository before an explicit public-release decision.
 
 ## Install with Fledge
 
