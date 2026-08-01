@@ -1,6 +1,6 @@
 ---
 name: corvid-swift-package
-description: Build and release CorvidLabs Swift packages with Fledge-first, Swift 6, and cross-platform discipline.
+description: Build, modify, test, review, or release CorvidLabs Swift packages with Fledge-first and Swift 6 discipline.
 ---
 
 # CorvidLabs Swift Package
@@ -19,8 +19,10 @@ and public API before proposing a change.
 ## Preserve package guarantees
 
 - Give every type, extension, member, and other declaration that admits access control an
-  explicit level (`public`, `internal`, `private`, or `fileprivate`); public API is
-  explicitly `public` and documented. Local declarations do not admit access modifiers.
+  explicit applicable level (`open`, `public`, `package`, `internal`, `fileprivate`, or
+  `private`). Use `open` only for externally subclassable or overridable API and `package`
+  only for package-scoped implementation API. Public API is explicit and documented. Local
+  declarations do not admit access modifiers.
 - Treat Swift 6 strict concurrency as a design constraint: cross-boundary values are `Sendable`,
   shared mutable state uses actors, and asynchronous APIs use `async`/`await`. For a
   Swift-5.9-compatible manifest, enable complete checking with
@@ -38,7 +40,8 @@ and public API before proposing a change.
 Run the repository's Fledge test/release lane first. Cover the changed behavior with focused
 tests, then run the package's required cross-platform or CI-equivalent lane before publishing.
 Check the release artifact and public documentation when an exported API, platform support, or
-version changes. Do not claim a release is ready from a macOS-only build.
+version changes. When a package declares non-macOS platforms, do not claim a release is ready
+from a macOS-only build.
 
 ## Keep reviews actionable
 
