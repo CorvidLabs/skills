@@ -1,15 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+root_dir="${FLEDGE_PLUGIN_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 skills_dir="$root_dir/skills"
+manifest_name=".corvid-skills.json"
 
 usage() {
     cat <<'EOF'
+Manage shared CorvidLabs agent skills in one repository.
+
 Usage:
-  corvid-skills list
-  corvid-skills install <skill> --repo <path> --host <codex|claude|cursor> [--link]
+  fledge skills list
+  fledge skills install <skill> [--repo <path>] [--host <auto|codex|claude|cursor>] [--link] [--dry-run]
+  fledge skills status [--repo <path>]
+
+Install copies a selected skill into a repository-local agent directory and
+records the exact source revision and content digest in .corvid-skills.json.
+It never overwrites an existing directory.
 EOF
+}
+
+fail() {
+    echo "corvid-skills: $*" >&2
+    exit 2
+}
+
+require_python() {
+    command -v python3 >/dev/null 2>&1 || fail "python3 is required to maintain $manifest_name safely"
 }
 
 host_directory() {
@@ -17,68 +34,186 @@ host_directory() {
         codex) printf '.codex/skills' ;;
         claude) printf '.claude/skills' ;;
         cursor) printf '.cursor/skills' ;;
-        *)
-            echo "Unsupported host: $1" >&2
-            exit 2
-            ;;
+        *) fail "unsupported host: $1" ;;
     esac
 }
 
+repository_root() {
+    local requested="${1:-.}"
+    [[ -d "$requested/.git" || -f "$requested/.git" ]] || fail "not a Git repository: $requested"
+    git -C "$requested" rev-parse --show-toplevel
+}
+
+resolve_host() {
+    local repo="$1"
+    local requested="$2"
+    if [[ "$requested" != "auto" ]]; then
+        host_directory "$requested" >/dev/null
+        printf '%s' "$requested"
+        return
+    fi
+
+    local candidates=()
+    local host
+    for host in codex claude cursor; do
+        [[ -d "$repo/$(host_directory "$host")" ]] && candidates+=("$host")
+    done
+    if [[ ${#candidates[@]} -eq 1 ]]; then
+        printf '%s' "${candidates[0]}"
+        return
+    fi
+    if [[ ${#candidates[@]} -eq 0 ]]; then
+        fail "cannot infer an agent host; pass --host codex, --host claude, or --host cursor"
+    fi
+    fail "multiple agent hosts are present (${candidates[*]}); pass --host explicitly"
+}
+
+directory_digest() {
+    local directory="$1"
+    (
+        cd "$directory"
+        find . -type f -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' file; do
+            if command -v shasum >/dev/null 2>&1; then
+                shasum -a 256 "$file"
+            else
+                sha256sum "$file"
+            fi
+        done
+    ) | if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'; else sha256sum | awk '{print $1}'; fi
+}
+
 list_skills() {
-    find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
+    find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | LC_ALL=C sort
+}
+
+write_manifest_entry() {
+    local manifest="$1"
+    local skill="$2"
+    local host="$3"
+    local destination_rel="$4"
+    local install_mode="$5"
+    local revision="$6"
+    local digest="$7"
+    require_python
+    python3 - "$manifest" "$skill" "$host" "$destination_rel" "$install_mode" "$revision" "$digest" <<'PY'
+import datetime
+import json
+import os
+import sys
+import tempfile
+
+manifest, skill, host, destination, mode, revision, digest = sys.argv[1:]
+data = {"schema_version": 1, "source": "CorvidLabs/skills", "installs": []}
+if os.path.exists(manifest):
+    with open(manifest, encoding="utf-8") as source:
+        data = json.load(source)
+    if data.get("schema_version") != 1 or not isinstance(data.get("installs"), list):
+        raise SystemExit(f"unsupported managed-skills manifest: {manifest}")
+    if any(item.get("skill") == skill and item.get("host") == host for item in data["installs"]):
+        raise SystemExit(f"managed install already recorded for {skill} on {host}")
+data["source"] = "CorvidLabs/skills"
+data["installs"].append({
+    "skill": skill,
+    "host": host,
+    "destination": destination,
+    "install_mode": mode,
+    "source_revision": revision,
+    "content_digest": digest,
+    "installed_at": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+})
+directory = os.path.dirname(manifest) or "."
+fd, temporary = tempfile.mkstemp(prefix=".corvid-skills.", dir=directory)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as output:
+        json.dump(data, output, indent=2, sort_keys=True)
+        output.write("\n")
+    os.replace(temporary, manifest)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
 }
 
 install_skill() {
     local skill="$1"
     shift
-    local repo=""
-    local host=""
+    local repo_arg="."
+    local host_arg="auto"
     local link="false"
+    local dry_run="false"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --repo) repo="$2"; shift 2 ;;
-            --host) host="$2"; shift 2 ;;
+            --repo) [[ $# -ge 2 ]] || fail "--repo needs a path"; repo_arg="$2"; shift 2 ;;
+            --host) [[ $# -ge 2 ]] || fail "--host needs a value"; host_arg="$2"; shift 2 ;;
             --link) link="true"; shift ;;
-            *) echo "Unknown option: $1" >&2; usage; exit 2 ;;
+            --dry-run) dry_run="true"; shift ;;
+            *) fail "unknown option: $1" ;;
         esac
     done
 
-    [[ -n "$repo" && -n "$host" ]] || { usage; exit 2; }
-    [[ -d "$repo/.git" || -f "$repo/.git" ]] || { echo "Not a Git repository: $repo" >&2; exit 2; }
-    [[ -f "$skills_dir/$skill/SKILL.md" ]] || { echo "Unknown skill: $skill" >&2; exit 2; }
+    [[ -f "$skills_dir/$skill/SKILL.md" ]] || fail "unknown skill: $skill"
+    local repo host destination destination_rel revision digest manifest
+    repo="$(repository_root "$repo_arg")"
+    host="$(resolve_host "$repo" "$host_arg")"
+    destination_rel="$(host_directory "$host")/$skill"
+    destination="$repo/$destination_rel"
+    manifest="$repo/$manifest_name"
+    [[ ! -e "$destination" && ! -L "$destination" ]] || fail "destination already exists: $destination"
 
-    local destination="$repo/$(host_directory "$host")/$skill"
-    mkdir -p "$(dirname "$destination")"
-    if [[ -e "$destination" || -L "$destination" ]]; then
-        echo "Destination already exists: $destination" >&2
-        echo "Remove or rename it after reviewing its contents, then rerun install." >&2
-        exit 2
+    revision="$(git -C "$root_dir" rev-parse HEAD 2>/dev/null || printf 'working-tree')"
+    digest="$(directory_digest "$skills_dir/$skill")"
+    if [[ "$dry_run" == "true" ]]; then
+        printf 'Would install %s for %s at %s (%s, revision %s)\n' "$skill" "$host" "$destination" "$([[ "$link" == true ]] && echo link || echo copy)" "$revision"
+        return
     fi
+
+    mkdir -p "$(dirname "$destination")"
     if [[ "$link" == "true" ]]; then
         ln -s "$skills_dir/$skill" "$destination"
+        write_manifest_entry "$manifest" "$skill" "$host" "$destination_rel" "link" "$revision" "$digest"
     else
-        cp -R "$skills_dir/$skill" "$destination"
+        local temporary="${destination}.tmp.$$"
+        cp -R "$skills_dir/$skill" "$temporary"
+        if ! write_manifest_entry "$manifest" "$skill" "$host" "$destination_rel" "copy" "$revision" "$digest"; then
+            rm -rf "$temporary"
+            exit 1
+        fi
+        mv "$temporary" "$destination"
     fi
+    printf 'Installed %s for %s at %s (revision %s)\n' "$skill" "$host" "$destination" "$revision"
+}
 
-    local revision
-    revision="$(git -C "$root_dir" rev-parse HEAD 2>/dev/null || printf 'working-tree')"
-    local manifest="$repo/.corvid-skills.json"
-    if [[ -e "$manifest" ]]; then
-        echo "Installed $skill for $host at $destination" >&2
-        echo "Existing manifest retained: $manifest" >&2
-    else
-        printf '{\n  "source": "CorvidLabs/skills",\n  "revision": "%s",\n  "host": "%s",\n  "skills": ["%s"]\n}\n' \
-            "$revision" "$host" "$skill" > "$manifest"
+status_skills() {
+    local repo_arg="."
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --repo) [[ $# -ge 2 ]] || fail "--repo needs a path"; repo_arg="$2"; shift 2 ;;
+            *) fail "unknown option: $1" ;;
+        esac
+    done
+    local repo manifest
+    repo="$(repository_root "$repo_arg")"
+    manifest="$repo/$manifest_name"
+    if [[ ! -f "$manifest" ]]; then
+        echo "No managed CorvidLabs skills are installed in $repo"
+        return
     fi
-    echo "Installed $skill for $host at $destination"
+    require_python
+    python3 - "$manifest" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    data = json.load(source)
+for item in data.get("installs", []):
+    print(f"{item['skill']}\t{item['host']}\t{item['destination']}\t{item['source_revision']}\t{item['install_mode']}")
+PY
 }
 
 case "${1:-}" in
-    list) list_skills ;;
-    install)
-        [[ $# -ge 2 ]] || { usage; exit 2; }
-        install_skill "$2" "${@:3}"
-        ;;
-    *) usage; exit 2 ;;
+    list) [[ $# -eq 1 ]] || fail "list accepts no options"; list_skills ;;
+    install) [[ $# -ge 2 ]] || { usage; exit 2; }; install_skill "$2" "${@:3}" ;;
+    status) status_skills "${@:2}" ;;
+    -h|--help|help|'') usage ;;
+    *) fail "unknown command: $1" ;;
 esac
