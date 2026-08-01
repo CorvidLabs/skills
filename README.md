@@ -69,7 +69,7 @@ for these hosts:
 | Cursor | `.cursor/skills/<skill>` | Yes |
 | Gemini | `.gemini/skills/<skill>` | Yes |
 | Grok | `.grok/skills/<skill>` | Yes |
-| OpenAI | `.openai/skills/<skill>` | Yes |
+| OpenAI | `.agents/skills/<skill>` | Yes |
 | Other agents | Agent-defined | No; use the agent's documented skill path. |
 
 Host placement does not translate private context or product-specific assumptions into a skill.
@@ -98,8 +98,10 @@ fledge skills uninstall augur --dry-run
 fledge skills uninstall augur
 ```
 
-`status` reports `current`, `modified`, or `missing`. Update and uninstall refuse modified
-or missing copies, so local work is never overwritten or removed. For a manifest-owned link,
+`status` reports `current`, `legacy`, `modified`, or `missing`. A `legacy` OpenAI entry was
+installed in the retired `.openai/skills` location; uninstall then reinstall it to move it to
+`.agents/skills`. Update and uninstall refuse modified or missing copies, so local work is never
+overwritten or removed. For a manifest-owned link,
 Fledge verifies the exact link target before refreshing metadata or removing the link.
 
 Update the catalog plugin separately when you want newer source content:

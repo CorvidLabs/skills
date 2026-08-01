@@ -1,4 +1,4 @@
 interface:
   display_name: "Corvid Swift Package"
   short_description: "Build and verify CorvidLabs Swift packages"
-  default_prompt: "Use -swift-package to implement and verify this CorvidLabs Swift package change."
+  default_prompt: "Use $corvid-swift-package to implement and verify this CorvidLabs Swift package change."

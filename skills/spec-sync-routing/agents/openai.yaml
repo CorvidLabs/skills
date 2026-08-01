@@ -1,4 +1,4 @@
 interface:
   display_name: "Spec Sync Routing"
   short_description: "Route work to repository-local Spec Sync truth"
-  default_prompt: "Use -sync-routing to locate and follow this repository's generated Spec Sync guidance."
+  default_prompt: "Use $spec-sync-routing to locate and follow this repository's generated Spec Sync guidance."

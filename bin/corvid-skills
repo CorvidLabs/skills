@@ -40,7 +40,7 @@ host_directory() {
         cursor) printf '.cursor/skills' ;;
         gemini) printf '.gemini/skills' ;;
         grok) printf '.grok/skills' ;;
-        openai) printf '.openai/skills' ;;
+        openai) printf '.agents/skills' ;;
         *) fail "unsupported host: $1" ;;
     esac
 }
@@ -87,8 +87,19 @@ ensure_safe_managed_paths() {
 
 has_only_regular_entries() {
     local directory="$1"
+    local unsupported=""
     [[ -d "$directory" && ! -L "$directory" ]] || return 1
-    [[ -z "$(find "$directory" -mindepth 1 ! -type d ! -type f -print -quit)" ]]
+    unsupported="$(find "$directory" -mindepth 1 ! -type d ! -type f -print -quit)" || return 1
+    [[ -z "$unsupported" ]]
+}
+
+entry_mode() {
+    local entry="$1"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        stat -f '%Lp' "$entry"
+    else
+        stat -c '%a' "$entry"
+    fi
 }
 
 validate_skill_source() {
@@ -131,6 +142,29 @@ directory_digest() {
         cd "$directory"
         find . -mindepth 1 -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' entry; do
             if [[ -d "$entry" ]]; then
+                printf 'directory\0%s\0%s\0' "$entry" "$(entry_mode "$entry")"
+            elif command -v shasum >/dev/null 2>&1; then
+                printf 'file\0%s\0%s\0%s\0' \
+                    "$entry" "$(entry_mode "$entry")" "$(shasum -a 256 "$entry" | awk '{print $1}')"
+            else
+                printf 'file\0%s\0%s\0%s\0' \
+                    "$entry" "$(entry_mode "$entry")" "$(sha256sum "$entry" | awk '{print $1}')"
+            fi
+        done
+    ) | if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{print $1}'
+    else
+        sha256sum | awk '{print $1}'
+    fi
+}
+
+legacy_directory_digest() {
+    local directory="$1"
+    has_only_regular_entries "$directory" || return 1
+    (
+        cd "$directory"
+        find . -mindepth 1 -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' entry; do
+            if [[ -d "$entry" ]]; then
                 printf 'directory\0%s\0' "$entry"
             elif command -v shasum >/dev/null 2>&1; then
                 printf 'file\0%s\0%s\0' "$entry" "$(shasum -a 256 "$entry" | awk '{print $1}')"
@@ -143,6 +177,37 @@ directory_digest() {
     else
         sha256sum | awk '{print $1}'
     fi
+}
+
+directory_metadata_digest() {
+    local directory="$1"
+    has_only_regular_entries "$directory" || return 1
+    (
+        cd "$directory"
+        find . -mindepth 1 -print0 | LC_ALL=C sort -z | while IFS= read -r -d '' entry; do
+            if [[ -d "$entry" ]]; then
+                printf 'directory\0%s\0%s\0' "$entry" "$(entry_mode "$entry")"
+            else
+                printf 'file\0%s\0%s\0' "$entry" "$(entry_mode "$entry")"
+            fi
+        done
+    ) | if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{print $1}'
+    else
+        sha256sum | awk '{print $1}'
+    fi
+}
+
+digest_matches() {
+    local directory="$1"
+    local expected_digest="$2"
+    local source_directory="$3"
+    if [[ "$expected_digest" == v2:* ]]; then
+        [[ "v2:$(directory_digest "$directory")" == "$expected_digest" ]]
+        return
+    fi
+    [[ "$(legacy_directory_digest "$directory")" == "$expected_digest" ]] || return 1
+    [[ "$(directory_metadata_digest "$directory")" == "$(directory_metadata_digest "$source_directory")" ]]
 }
 
 list_skills() {
@@ -226,17 +291,24 @@ with open(sys.argv[1], encoding="utf-8") as source:
 if data.get("schema_version") != 1 or not isinstance(data.get("installs"), list):
     raise SystemExit(f"unsupported managed-skills manifest: {sys.argv[1]}")
 for item in data["installs"]:
-    fields = (
-        item["skill"],
-        item["host"],
-        item["destination"],
-        item["source_revision"],
-        item["install_mode"],
-        item.get("content_digest", ""),
-    )
-    if any("\t" in str(field) or "\n" in str(field) for field in fields):
+    if not isinstance(item, dict):
+        raise SystemExit("invalid managed-skills manifest entry")
+    try:
+        fields = (
+            item["skill"],
+            item["host"],
+            item["destination"],
+            item["source_revision"],
+            item["install_mode"],
+            item.get("content_digest", ""),
+        )
+    except KeyError:
+        raise SystemExit("invalid managed-skills manifest entry") from None
+    if any(not isinstance(field, str) for field in fields):
+        raise SystemExit("invalid managed-skills manifest entry")
+    if any("\t" in field or "\n" in field for field in fields):
         raise SystemExit("invalid control character in managed-skills manifest")
-    print("\t".join(str(field) for field in fields))
+    print("\t".join(fields))
 PY
 }
 
@@ -249,9 +321,16 @@ expected_destination() {
         cursor) printf '.cursor/skills/%s' "$skill" ;;
         gemini) printf '.gemini/skills/%s' "$skill" ;;
         grok) printf '.grok/skills/%s' "$skill" ;;
-        openai) printf '.openai/skills/%s' "$skill" ;;
+        openai) printf '.agents/skills/%s' "$skill" ;;
         *) return 1 ;;
     esac
+}
+
+is_legacy_openai_destination() {
+    local skill="$1"
+    local host="$2"
+    local destination_rel="$3"
+    [[ "$host" == "openai" && "$destination_rel" == ".openai/skills/$skill" ]]
 }
 
 entry_state() {
@@ -269,7 +348,9 @@ entry_state() {
 
     [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { printf 'modified'; return; }
     expected_rel="$(expected_destination "$skill" "$host" 2>/dev/null || true)"
-    [[ -n "$expected_rel" && "$destination_rel" == "$expected_rel" ]] || { printf 'modified'; return; }
+    if [[ -z "$expected_rel" || "$destination_rel" != "$expected_rel" ]]; then
+        is_legacy_openai_destination "$skill" "$host" "$destination_rel" || { printf 'modified'; return; }
+    fi
     [[ "$install_mode" == "copy" || "$install_mode" == "link" ]] || { printf 'modified'; return; }
 
     IFS='/' read -r -a components <<< "$destination_rel"
@@ -281,9 +362,11 @@ entry_state() {
     if [[ "$install_mode" == "link" && -L "$destination" ]]; then
         if [[ "$(readlink "$destination")" == "$skills_dir/$skill" ]]; then
             if has_only_regular_entries "$skills_dir/$skill"; then
-                local actual_digest
-                actual_digest="$(directory_digest "$skills_dir/$skill")"
-                [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+                if digest_matches "$skills_dir/$skill" "$expected_digest" "$skills_dir/$skill"; then
+                    is_legacy_openai_destination "$skill" "$host" "$destination_rel" && printf 'legacy' || printf 'current'
+                else
+                    printf 'modified'
+                fi
             else
                 printf 'modified'
             fi
@@ -292,9 +375,11 @@ entry_state() {
         fi
     elif [[ "$install_mode" == "copy" && -d "$destination" && ! -L "$destination" ]]; then
         if has_only_regular_entries "$destination"; then
-            local actual_digest
-            actual_digest="$(directory_digest "$destination")"
-            [[ "$actual_digest" == "$expected_digest" ]] && printf 'current' || printf 'modified'
+            if digest_matches "$destination" "$expected_digest" "$skills_dir/$skill"; then
+                is_legacy_openai_destination "$skill" "$host" "$destination_rel" && printf 'legacy' || printf 'current'
+            else
+                printf 'modified'
+            fi
         else
             printf 'modified'
         fi
@@ -395,7 +480,7 @@ install_skill() {
     [[ ! -e "$destination" && ! -L "$destination" ]] || fail "destination already exists: $destination"
 
     revision="$(git -C "$root_dir" rev-parse --verify HEAD 2>/dev/null || printf 'working-tree')"
-    digest="$(directory_digest "$skills_dir/$skill")"
+    digest="v2:$(directory_digest "$skills_dir/$skill")"
     if [[ "$dry_run" == "true" ]]; then
         local requested_mode="copy"
         [[ "$link" == "true" ]] && requested_mode="link"
@@ -447,25 +532,35 @@ update_skills() {
     manifest="$repo/$manifest_name"
     [[ -f "$manifest" && ! -L "$manifest" ]] || fail "managed-skills manifest not found: $manifest"
     revision="$(git -C "$root_dir" rev-parse --verify HEAD 2>/dev/null || printf 'working-tree')"
+    local manifest_output=""
+    if ! manifest_output="$(manifest_rows "$manifest")"; then
+        fail "invalid managed-skills manifest: $manifest"
+    fi
     local records=()
     local row
-    while IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest; do
-        [[ "$requested" == "--all" || "$skill" == "$requested" ]] || continue
-        [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
-        printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
-            "$skill" "$host" "$destination_rel" "$old_revision" "$install_mode" "$expected_digest"
-        records+=("$row")
-    done < <(manifest_rows "$manifest")
+    if [[ -n "$manifest_output" ]]; then
+        while IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest; do
+            [[ "$requested" == "--all" || "$skill" == "$requested" ]] || continue
+            [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
+            printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
+                "$skill" "$host" "$destination_rel" "$old_revision" "$install_mode" "$expected_digest"
+            records+=("$row")
+        done <<< "$manifest_output"
+    fi
     [[ ${#records[@]} -gt 0 ]] || fail "no matching managed skills are installed"
 
     local record skill host destination_rel old_revision install_mode expected_digest state
     for record in "${records[@]}"; do
         IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest <<< "$record"
         validate_skill_source "$skill"
-        [[ "$destination_rel" == "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]] ||
-            fail "refusing unsafe manifest destination: $destination_rel"
+        if [[ "$destination_rel" != "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]]; then
+            is_legacy_openai_destination "$skill" "$host" "$destination_rel" ||
+                fail "refusing unsafe manifest destination: $destination_rel"
+        fi
         ensure_safe_managed_paths "$repo" "$destination_rel" "$install_mode"
         state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
+        [[ "$state" != "legacy" ]] ||
+            fail "OpenAI skill $skill uses legacy .openai placement; uninstall then reinstall it for OpenAI"
         if [[ "$install_mode" == "link" ]]; then
             managed_link_is_owned "$repo" "$skill" "$destination_rel" ||
                 fail "refusing to update $skill on $host: managed link was changed or removed"
@@ -478,7 +573,7 @@ update_skills() {
     for record in "${records[@]}"; do
         IFS=$'\t' read -r skill host destination_rel old_revision install_mode expected_digest <<< "$record"
         destination="$repo/$destination_rel"
-        new_digest="$(directory_digest "$skills_dir/$skill")"
+        new_digest="v2:$(directory_digest "$skills_dir/$skill")"
         if [[ "$dry_run" == "true" ]]; then
             printf 'Would update %s for %s at %s to revision %s\n' "$skill" "$host" "$destination" "$revision"
             continue
@@ -526,29 +621,38 @@ uninstall_skill() {
     repo="$(repository_root "$repo_arg")"
     manifest="$repo/$manifest_name"
     [[ -f "$manifest" && ! -L "$manifest" ]] || fail "managed-skills manifest not found: $manifest"
+    local manifest_output=""
+    if ! manifest_output="$(manifest_rows "$manifest")"; then
+        fail "invalid managed-skills manifest: $manifest"
+    fi
     local records=()
     local row
-    while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
-        [[ "$skill" == "$requested" ]] || continue
-        [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
-        printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
-            "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$expected_digest"
-        records+=("$row")
-    done < <(manifest_rows "$manifest")
+    if [[ -n "$manifest_output" ]]; then
+        while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
+            [[ "$skill" == "$requested" ]] || continue
+            [[ -z "$host_filter" || "$host" == "$host_filter" ]] || continue
+            printf -v row '%s\t%s\t%s\t%s\t%s\t%s' \
+                "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$expected_digest"
+            records+=("$row")
+        done <<< "$manifest_output"
+    fi
     [[ ${#records[@]} -gt 0 ]] || fail "no matching managed skill is installed: $requested"
 
     local record skill host destination_rel revision install_mode expected_digest state
     for record in "${records[@]}"; do
         IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest <<< "$record"
-        [[ "$destination_rel" == "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]] ||
-            fail "refusing unsafe manifest destination: $destination_rel"
+        if [[ "$destination_rel" != "$(expected_destination "$skill" "$host" 2>/dev/null || true)" ]]; then
+            is_legacy_openai_destination "$skill" "$host" "$destination_rel" ||
+                fail "refusing unsafe manifest destination: $destination_rel"
+        fi
         ensure_safe_managed_paths "$repo" "$destination_rel" "$install_mode"
         state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
         if [[ "$install_mode" == "link" ]]; then
             managed_link_is_owned "$repo" "$skill" "$destination_rel" ||
                 fail "refusing to uninstall $skill on $host: managed link was changed or removed"
         else
-            [[ "$state" == "current" ]] || fail "refusing to uninstall $skill on $host: state is $state"
+            [[ "$state" == "current" || "$state" == "legacy" ]] ||
+                fail "refusing to uninstall $skill on $host: state is $state"
         fi
     done
 
@@ -598,18 +702,24 @@ status_skills() {
         fi
         return
     fi
+    local manifest_output=""
+    if ! manifest_output="$(manifest_rows "$manifest")"; then
+        fail "invalid managed-skills manifest: $manifest"
+    fi
     local status_output=""
-    while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
-        local state
-        state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
-        local status_line
-        printf -v status_line '%s\t%s\t%s\t%s\t%s\t%s' \
-            "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$state"
-        if [[ -n "$status_output" ]]; then
-            status_output+=$'\n'
-        fi
-        status_output+="$status_line"
-    done < <(manifest_rows "$manifest")
+    if [[ -n "$manifest_output" ]]; then
+        while IFS=$'\t' read -r skill host destination_rel revision install_mode expected_digest; do
+            local state
+            state="$(entry_state "$repo" "$skill" "$host" "$destination_rel" "$install_mode" "$expected_digest")"
+            local status_line
+            printf -v status_line '%s\t%s\t%s\t%s\t%s\t%s' \
+                "$skill" "$host" "$destination_rel" "$revision" "$install_mode" "$state"
+            if [[ -n "$status_output" ]]; then
+                status_output+=$'\n'
+            fi
+            status_output+="$status_line"
+        done <<< "$manifest_output"
+    fi
     if [[ "$json" == "true" ]]; then
         { [[ -z "$status_output" ]] || printf '%s\n' "$status_output"; } | python3 -c '
 import json

@@ -1,4 +1,4 @@
 interface:
   display_name: "Rune Session Control"
   short_description: "Observe and control confirmed agent sessions"
-  default_prompt: "Use  to safely observe or control this confirmed CLI-agent session."
+  default_prompt: "Use $rune to safely observe or control this confirmed CLI-agent session."

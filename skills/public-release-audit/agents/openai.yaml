@@ -1,4 +1,4 @@
 interface:
   display_name: "Public Release Audit"
   short_description: "Audit repositories before public release"
-  default_prompt: "Use -release-audit to assess this repository for a safe public release."
+  default_prompt: "Use $public-release-audit to assess this repository for a safe public release."
