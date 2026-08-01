@@ -1,0 +1,25 @@
+schema_version = 1
+
+[tasks]
+test = "bash tests/installer.sh"
+lint = "shellcheck bin/corvid-skills bin/fledge-skills tests/installer.sh"
+plugin-validate = "fledge plugins validate . --strict"
+secrets = "gitleaks dir . --no-banner --redact --exit-code 1"
+history-secrets = "gitleaks git . --no-banner --redact --exit-code 1"
+
+[tasks.diff-check]
+cmd = """
+git diff --check
+if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+    git diff --check HEAD^..HEAD
+fi
+"""
+description = "Check whitespace in the worktree and the committed head delta."
+
+[lanes.verify]
+description = "Validate the plugin, lint the scripts, run installer tests, and check the diff."
+steps = ["plugin-validate", "lint", "test", "diff-check"]
+
+[lanes.audit]
+description = "Run the verification gate and scan the public tree and history for secrets."
+steps = ["plugin-validate", "lint", "test", "diff-check", "secrets", "history-secrets"]

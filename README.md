@@ -16,11 +16,13 @@ Spec Sync material.
 
 ## Install with Fledge
 
-Bootstrap the private Skills plugin once, preferably at a released tag:
+Bootstrap the Skills plugin once:
 
 ```sh
-fledge plugins install CorvidLabs/skills@v0.1.0
+fledge plugins install CorvidLabs/skills
 ```
+
+Pin the source to a released tag when a catalog release is available.
 
 Then install a selected skill into the current Git repository:
 
@@ -38,6 +40,20 @@ local skill development only.
 The initial plugin deliberately supports `list`, `install`, and `status` only.
 Safe managed `update` and `uninstall` will follow after their ownership and
 local-modification rules are tested.
+
+## Verify the catalog
+
+Use the repository-defined Fledge lanes:
+
+```sh
+fledge run --list
+fledge lanes validate . --strict
+fledge lanes run verify
+fledge lanes run audit
+```
+
+The verification lane requires Bash, Python 3, and ShellCheck. The audit lane also
+requires Gitleaks and redacts any finding output.
 
 ## Direct installer
 
