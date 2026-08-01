@@ -21,7 +21,7 @@ replacement for a repository's `AGENTS.md`, framework conventions, or product sp
 
    ```sh
    fledge run --help
-   fledge lanes run verify
+   fledge lanes --help
    ```
 
 Do not copy generic commands into project documentation when the repository already
@@ -45,19 +45,15 @@ Implement the smallest complete vertical change: user-visible behavior, accessib
 typed boundary, test coverage, and any canonical spec or documentation the project
 requires. Exercise the real package scripts or Fledge lane, not an invented substitute:
 
-```sh
-fledge run test
-fledge lanes run verify
-# Fall back only when the repository has no Fledge equivalent:
-bun test
-bun run lint
-bun run build
-```
+First discover the project's declared Fledge task or lane, then run its exact name. Fall back
+to the repository's Bun scripts only when there is no Fledge equivalent; do not assume every
+project defines `test` or `verify`.
 
 For UI changes, test keyboard navigation, focus behavior, loading/error/empty states,
-and responsive layout where the product supports it. Use a project-provided visual or
-end-to-end task when available. Do not claim a browser workflow works solely because a
-TypeScript build passed.
+and responsive layout where the product supports it. Run and report the project's AXE coverage
+(or add it if none exists), and verify WCAG AA contrast and keyboard focus behavior. Use a
+project-provided visual or end-to-end task when available. Do not claim a browser workflow
+works solely because a TypeScript build passed.
 
 ## Before push
 
