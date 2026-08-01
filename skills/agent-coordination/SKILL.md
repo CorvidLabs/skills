@@ -25,11 +25,13 @@ request, CI, and sandbox.
 
 ## Observe by default
 
-Use `fledge rune watch` to open a confirmed CLI-agent session in a PTY. Observe current
-work before sending anything. Use a short timeout when only inspecting a session.
+Use `fledge rune watch` to open a confirmed CLI-agent session in a live PTY and observe
+current work before sending anything. For a bounded, non-interactive inspection, use
+`run` with a short timeout instead.
 
 ```sh
-fledge rune watch --timeout=60 -- <agent-cli> --resume <session-id>
+fledge rune run --timeout=60 -- <agent-cli> --resume <session-id>
+fledge rune watch -- <agent-cli> --resume <session-id>
 ```
 
 ## Intervene narrowly

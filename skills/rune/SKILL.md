@@ -16,11 +16,12 @@ needs inspection:
 
 ```sh
 fledge rune run --timeout=30 -- <agent-cli> --resume <session-id>
-fledge rune watch --timeout=60 --log <event-log.ndjson> -- <agent-cli> --resume <session-id>
+fledge rune watch --log=<event-log.ndjson> -- <agent-cli> --resume <session-id>
 ```
 
-Keep the timeout short when only inspecting output. Preserve the event log when it is useful
-evidence for a handoff, but do not mistake terminal text for committed or CI-verified work.
+Keep `run` timeouts short when only inspecting output. Preserve the `watch` event log when it
+is useful evidence for a handoff, but do not mistake terminal text for committed or CI-verified
+work.
 
 ## Send one scoped instruction
 
