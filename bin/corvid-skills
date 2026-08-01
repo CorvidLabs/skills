@@ -40,8 +40,32 @@ host_directory() {
 
 repository_root() {
     local requested="${1:-.}"
-    [[ -d "$requested/.git" || -f "$requested/.git" ]] || fail "not a Git repository: $requested"
-    git -C "$requested" rev-parse --show-toplevel
+    [[ -d "$requested" ]] || fail "not a directory: $requested"
+    git -C "$requested" rev-parse --show-toplevel 2>/dev/null || fail "not a Git repository: $requested"
+}
+
+ensure_safe_install_paths() {
+    local repo="$1"
+    local destination_rel="$2"
+    local current="$repo"
+    local component
+    local components=()
+
+    IFS='/' read -r -a components <<< "$destination_rel"
+    for component in "${components[@]}"; do
+        current="$current/$component"
+        [[ ! -L "$current" ]] || fail "refusing symlinked install path: $current"
+    done
+    [[ ! -L "$repo/$manifest_name" ]] || fail "refusing symlinked manifest: $repo/$manifest_name"
+}
+
+validate_skill_source() {
+    local skill="$1"
+    [[ "$skill" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid skill name: $skill"
+    [[ -d "$skills_dir/$skill" && ! -L "$skills_dir/$skill" && -f "$skills_dir/$skill/SKILL.md" ]] ||
+        fail "unknown skill: $skill"
+    [[ -z "$(find "$skills_dir/$skill" -type l -print -quit)" ]] ||
+        fail "skill contains a symlink: $skill"
 }
 
 resolve_host() {
@@ -152,13 +176,14 @@ install_skill() {
         esac
     done
 
-    [[ -f "$skills_dir/$skill/SKILL.md" ]] || fail "unknown skill: $skill"
+    validate_skill_source "$skill"
     local repo host destination destination_rel revision digest manifest
     repo="$(repository_root "$repo_arg")"
     host="$(resolve_host "$repo" "$host_arg")"
     destination_rel="$(host_directory "$host")/$skill"
     destination="$repo/$destination_rel"
     manifest="$repo/$manifest_name"
+    ensure_safe_install_paths "$repo" "$destination_rel"
     [[ ! -e "$destination" && ! -L "$destination" ]] || fail "destination already exists: $destination"
 
     revision="$(git -C "$root_dir" rev-parse HEAD 2>/dev/null || printf 'working-tree')"

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Fledge
+        env:
+          FLEDGE_VERSION: v1.7.2
+        run: |
+          base="https://github.com/CorvidLabs/fledge/releases/download/${FLEDGE_VERSION}"
+          binary="${RUNNER_TEMP}/fledge"
+          checksum="${binary}.sha256"
+
+          curl -fsSL --retry 5 --retry-connrefused --retry-delay 1 \
+            "${base}/fledge-linux-x86_64" -o "${binary}"
+          curl -fsSL --retry 5 --retry-connrefused --retry-delay 1 \
+            "${base}/fledge-linux-x86_64.sha256" -o "${checksum}"
+
+          expected="$(awk '{print $1}' "${checksum}")"
+          test -n "${expected}"
+          printf '%s  %s\n' "${expected}" "${binary}" | sha256sum -c -
+          chmod +x "${binary}"
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+
+      - name: Run the catalog verification lane
+        run: |
+          fledge lanes validate . --strict
+          fledge lanes run verify
+
+      - name: Install the catalog plugin from this checkout
+        run: fledge plugins install . --yes --non-interactive
+
+      - name: Dogfood a repository-local skill install
+        shell: bash
+        run: |
+          test_repo="$(mktemp -d)"
+          trap 'rm -rf "$test_repo"' EXIT
+          git -C "$test_repo" init -q
+
+          fledge skills list | grep -qx 'agent-coordination'
+          fledge skills list | grep -qx 'spec-sync'
+          fledge skills install agent-coordination --repo "$test_repo" --host codex
+          fledge skills install spec-sync --repo "$test_repo" --host codex
+          fledge skills status --repo "$test_repo" | grep -q '^agent-coordination'
+          fledge skills status --repo "$test_repo" | grep -q '^spec-sync'
+
+          test -f "$test_repo/.codex/skills/agent-coordination/SKILL.md"
+          test -f "$test_repo/.codex/skills/spec-sync/SKILL.md"

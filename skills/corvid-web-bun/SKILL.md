@@ -1,6 +1,6 @@
 ---
 name: corvid-web-bun
-description: Build, change, test, and release CorvidLabs web projects that use Bun. Use for TypeScript, HTML, CSS, browser UI, Bun servers, package scripts, or web CI; defer architecture and framework decisions to the repository's local instructions.
+description: Build, modify, test, review, or release CorvidLabs Bun web projects for TypeScript, UI, servers, and CI.
 ---
 
 # CorvidLabs Web with Bun
