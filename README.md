@@ -11,7 +11,9 @@ generated Spec Sync material.
 
 Install the catalog plugin, inspect it, and add **only the skills a repository needs**
 (one skill per `install`—there is no `install --all`). Prefer a focused set over dumping
-the whole catalog into every project:
+the whole catalog into every project.
+
+**Minimal core** (good default for most CorvidLabs repos):
 
 ```sh
 fledge plugins install CorvidLabs/skills
@@ -21,7 +23,9 @@ fledge skills install fledge-workflows --host codex
 fledge skills status
 ```
 
-`update --all` refreshes skills that are already managed; it does not install missing ones.
+Add product skills (`let`, `rune`, `augur`, `atlas`, …) only when that tool is actually used
+in the project. `update --all` refreshes skills that are already managed; it does not
+install missing ones.
 
 To pin a published catalog release, add its tag to the source, for example:
 
