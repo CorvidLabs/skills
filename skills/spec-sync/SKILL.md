@@ -10,7 +10,24 @@ change in a repository that uses Spec Sync. The CLI binary is **`specsync`** (no
 `spec-sync`). Exact verbs and paths come from the **installed** binary and the
 **repository-generated** local skill—not from this shared catalog entry.
 
+## Install
+
+**This catalog skill** (shared principles only — see collision notes below):
+
 ```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install spec-sync --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+Prefer `spec-sync-routing` plus a **repository-generated** skill when Spec Sync is
+initialized; do not overwrite generated `.codex/skills/spec-sync` (or host equivalents).
+
+**Product CLI** — Spec Sync is **not** a Fledge plugin. Install the binary separately, for
+example:
+
+```sh
+brew install CorvidLabs/tap/spec-sync
+# or: cargo install specsync
 specsync --version
 specsync --help
 ```

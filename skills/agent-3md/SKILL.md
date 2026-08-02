@@ -11,6 +11,16 @@ Let can **locate** the file; this skill **validates, routes, and optionally runs
 
 ## Install
 
+**This catalog skill** (agent guidance):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install agent-3md --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product tooling** — CorvidLabs/agent-3md is **not** a Fledge plugin. There is no
+`fledge plugins install` / `fledge agent3md` surface.
+
 **TypeScript library** (embed; npm latest is the library path):
 
 ```sh

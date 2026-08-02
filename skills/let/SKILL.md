@@ -11,8 +11,20 @@ read-oriented. **Workbed commands** (`init`, `worktree add|remove`, `memory set|
 `super init-example`) can write under project or user `.let` paths—do not use them unless
 the task authorizes local writes.
 
-Let does not send prompts to an agent or expose live model reasoning. Install and prefer
-the Fledge entrypoint (the shell builtin `let` is unrelated):
+Let does not send prompts to an agent or expose live model reasoning.
+
+## Install
+
+**This catalog skill** (agent guidance) — requires the skills catalog plugin, then place
+the skill in a host directory:
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install let --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product CLI** — Let is a Fledge plugin (`plugin.toml` name `let`), not the skills
+catalog entry. Prefer the Fledge entrypoint (the shell builtin `let` is unrelated):
 
 ```sh
 fledge plugins install CorvidLabs/let

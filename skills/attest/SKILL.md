@@ -5,9 +5,21 @@ description: Verify or record reviewed commit provenance, policy gates, and audi
 
 # Attest
 
-Attest records review evidence for exact commits in Git notes (`refs/notes/attest`). The
-public Fledge plugin targets **macOS 13+** (no Linux/Windows plugin support). Signing is
-optional—an unsigned attestation is still a valid local record.
+Attest records review evidence for exact commits in Git notes (`refs/notes/attest`). Signing
+is optional—an unsigned attestation is still a valid local record.
+
+## Install
+
+**This catalog skill** (agent guidance):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install attest --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product CLI** — use the Fledge plugin repo `CorvidLabs/fledge-plugin-attest` (not the
+standalone `attest` kit alone). The public Fledge plugin targets **macOS 13+** (no
+Linux/Windows plugin support).
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-attest

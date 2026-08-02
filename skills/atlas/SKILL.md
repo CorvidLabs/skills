@@ -7,6 +7,17 @@ description: Inspect spec ownership, drift, coverage, review queues, and gaps wi
 
 Atlas maps code to specifications. A spec-less result is valid evidence, not a command failure.
 
+## Install
+
+**This catalog skill** (agent guidance):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install atlas --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product CLI** — Atlas is a Fledge plugin (`CorvidLabs/fledge-plugin-atlas`):
+
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-atlas
 fledge atlas --help

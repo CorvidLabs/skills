@@ -9,9 +9,19 @@ Use Augur for deterministic change-risk evidence (churn, coupling, test gaps, se
 paths, ownership, revert history). Verdicts are `proceed`, `review`, or `block`. It
 supplements tests and review; it does not approve a change. No API key or LLM required.
 
-The public Fledge plugin (`fledge-plugin-augur`) targets **macOS 13+**. The standalone
-`augur` CLI may support additional platforms; this skill documents the Fledge entrypoint
-only. Confirm with `fledge augur --help` after install.
+## Install
+
+**This catalog skill** (agent guidance):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install augur --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product CLI** — use the Fledge plugin repo `CorvidLabs/fledge-plugin-augur` (not the
+standalone `augur` kit alone). The public plugin targets **macOS 13+**. The standalone
+`augur` CLI may support additional platforms; this skill documents `fledge augur` only.
+Confirm with `fledge augur --help` after install.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-augur

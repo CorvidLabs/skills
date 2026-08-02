@@ -9,6 +9,18 @@ Use this skill as the hub before asking an agent for status, intervening in its 
 choosing a worktree. Product detail lives in sibling skills: `let`, `rune`,
 `fledge-workflows`, and `spec-sync` / `spec-sync-routing`.
 
+## Install
+
+**This catalog skill** only (coordination policy; no dedicated product binary):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install agent-coordination --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+Product tools used in the sequence are separate: install Let/Rune as Fledge plugins, Spec
+Sync as `specsync`, and Fledge core independently. See each sibling skill's Install section.
+
 ## Sequence
 
 1. **Discover** the repository, worktree, and (when authorized) session owner.

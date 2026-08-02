@@ -9,6 +9,18 @@ Use `fledge rune` only after the target repository, worktree, session, and activ
 confirmed. Rune wraps a CLI in a PTY; it does not make a provider reachable, override an
 agent's permissions, or turn a stale session record into a live connection.
 
+## Install
+
+**This catalog skill** (agent guidance):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install rune --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+**Product CLI** — Rune is a Fledge plugin (`plugin.toml` name `rune`). Use the owner/repo
+form (not bare `rune`):
+
 ```sh
 fledge plugins install CorvidLabs/rune
 fledge rune --help
@@ -16,9 +28,9 @@ fledge rune run --help
 fledge rune watch --help
 ```
 
-Document the **public CorvidLabs/rune** surface below (0.2.x: `run` / `watch` / `version`).
-Always re-check the installed plugin's `--help`—a local or forked install may expose extra
-flags.
+Standalone install is also available via Homebrew (`corvidlabs/tap/rune`). Document the
+**public CorvidLabs/rune** surface below (0.2.x: `run` / `watch` / `version`). Always
+re-check the installed plugin's `--help`—a local or forked install may expose extra flags.
 
 ## Commands
 

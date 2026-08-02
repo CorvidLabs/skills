@@ -9,6 +9,18 @@ Use this skill for a Swift package owned by CorvidLabs. It is a shared operating
 not a substitute for product CLIs. The repository's `AGENTS.md`, `Package.swift`, local
 skills, and CI configuration win whenever they are more specific.
 
+## Install
+
+**This catalog skill** (engineering baseline; not a product plugin):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install corvid-swift-package --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+Requires Fledge (and Swift) on the machine; there is no separate product package for this
+skill.
+
 ## Discover before changing code
 
 Start with the repository's instructions and Fledge surface. Use the native task or lane when

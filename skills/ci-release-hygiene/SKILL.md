@@ -8,6 +8,18 @@ description: Keep CI, pre-push verification, and release evidence tied to the cu
 Use this skill when diagnosing CI, preparing a push, or deciding whether a release is
 ready.
 
+## Install
+
+**This catalog skill** (practice guidance; not a product plugin):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install ci-release-hygiene --host <codex|claude|cursor|gemini|grok|openai>
+```
+
+Uses core Fledge (`work`, `lanes`, optional `release`) and any repo-configured plugins
+(e.g. augur/attest) when present.
+
 ## Identify the revision
 
 First confirm the PR head and the revision that each CI run tested:
