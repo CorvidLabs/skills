@@ -562,4 +562,33 @@ fi
 "$installer" uninstall agent-coordination --repo "$legacy_openai_repo" --host openai
 test ! -e "$legacy_openai_repo/.openai/skills/agent-coordination"
 
+# Machine-global installs use $CORVID_SKILLS_HOME (defaults to $HOME).
+global_home="$test_dir/global-home"
+mkdir -p "$global_home/.claude"
+export CORVID_SKILLS_HOME="$global_home"
+"$installer" install agent-coordination --global --host claude
+"$installer" install fledge-workflows --global --host claude --link
+test -f "$global_home/.claude/skills/agent-coordination/SKILL.md"
+test -L "$global_home/.claude/skills/fledge-workflows"
+test -f "$global_home/.corvid-skills.json"
+"$installer" status --global | grep -q $'^agent-coordination\tclaude\t.claude/skills/agent-coordination\t.*\tcopy\tcurrent$'
+"$installer" status --global | grep -q $'^fledge-workflows\tclaude\t.claude/skills/fledge-workflows\t.*\tlink\tcurrent$'
+# Only one host root exists, so --host auto works.
+"$installer" install let --global --host auto
+test -f "$global_home/.claude/skills/let/SKILL.md"
+if "$installer" install agent-coordination --global --host claude; then
+    echo "expected global reinstall to be rejected" >&2
+    exit 1
+fi
+if "$installer" install augur --global --repo "$test_dir"; then
+    echo "expected --global with --repo to be rejected" >&2
+    exit 1
+fi
+"$installer" update agent-coordination --global --host claude
+"$installer" uninstall fledge-workflows --global --host claude
+test ! -e "$global_home/.claude/skills/fledge-workflows"
+mkdir -p "$global_home/.grok"
+"$installer" install augur --global --host grok --dry-run | grep -q 'Would install'
+unset CORVID_SKILLS_HOME
+
 echo "installer tests passed"

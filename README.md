@@ -1,22 +1,43 @@
 # CorvidLabs Skills
 
 Public, versioned operating knowledge for software agents working with CorvidLabs tools.
-Each skill is a portable `SKILL.md`; Fledge provides safe repository-local installation,
-status, update, and uninstall commands.
+Each skill is a portable `SKILL.md`; Fledge provides safe installation (repository-local
+or machine-global), status, update, and uninstall commands.
 
 Product repositories remain authoritative for their own architecture, commands, and
 generated Spec Sync material.
 
 ## Quick start
 
-Install the catalog plugin, inspect it, and add only the skills a repository needs:
+Install the catalog plugin, then add skills **one at a time** (there is no `install --all`).
+
+**Minimal core — repository-local** (good default for a single project):
 
 ```sh
 fledge plugins install CorvidLabs/skills
 fledge skills list
 fledge skills install agent-coordination --host codex
+fledge skills install fledge-workflows --host codex
 fledge skills status
 ```
+
+**Minimal core — machine-global** (available to every project for that host agent):
+
+```sh
+fledge plugins install CorvidLabs/skills
+fledge skills install agent-coordination --global --host claude
+fledge skills install fledge-workflows --global --host claude
+fledge skills status --global
+```
+
+Global installs land under `$HOME` (or `$CORVID_SKILLS_HOME` if set), for example
+`~/.claude/skills/<skill>`, and are tracked in `~/.corvid-skills.json`. They do **not**
+replace repository-local installs; a project can still install a different set with
+`--repo` / default cwd.
+
+Add product skills (`let`, `rune`, `augur`, `atlas`, …) only when that tool is actually used.
+`update --all` (optionally with `--global`) refreshes skills that are already managed; it
+does not install missing ones.
 
 To pin a published catalog release, add its tag to the source, for example:
 
@@ -62,15 +83,15 @@ The skill content is agent-neutral Markdown. Any agent that can load a `SKILL.md
 repository context can use it. Fledge currently provides automatic, collision-safe placement
 for these hosts:
 
-| Host | Repository-local destination | Automatic placement |
-| --- | --- | --- |
-| Codex | `.codex/skills/<skill>` | Yes |
-| Claude | `.claude/skills/<skill>` | Yes |
-| Cursor | `.cursor/skills/<skill>` | Yes |
-| Gemini | `.gemini/skills/<skill>` | Yes |
-| Grok | `.grok/skills/<skill>` | Yes |
-| OpenAI | `.agents/skills/<skill>` | Yes |
-| Other agents | Agent-defined | No; use the agent's documented skill path. |
+| Host | Repo-local (`--repo` / cwd) | Machine-global (`--global`) | Automatic placement |
+| --- | --- | --- | --- |
+| Codex | `.codex/skills/<skill>` | `~/.codex/skills/<skill>` | Yes |
+| Claude | `.claude/skills/<skill>` | `~/.claude/skills/<skill>` | Yes |
+| Cursor | `.cursor/skills/<skill>` | `~/.cursor/skills/<skill>` | Yes |
+| Gemini | `.gemini/skills/<skill>` | `~/.gemini/skills/<skill>` | Yes |
+| Grok | `.grok/skills/<skill>` | `~/.grok/skills/<skill>` | Yes |
+| OpenAI | `.agents/skills/<skill>` | `~/.agents/skills/<skill>` | Yes |
+| Other agents | Agent-defined | Agent-defined | No; use the agent's documented skill path. |
 
 Host placement does not translate private context or product-specific assumptions into a skill.
 All catalog content and examples must remain usable from public CorvidLabs sources.
@@ -80,22 +101,23 @@ managed by that agent or by the user.
 ## Manage installed skills
 
 Installs copy by default. Use `--link` only while developing this catalog locally.
-Every placement is recorded in `.corvid-skills.json` with its source revision, mode,
-destination, and content digest.
+Every placement is recorded in `.corvid-skills.json` (repo root or `$HOME` for `--global`)
+with its source revision, mode, destination, and content digest.
 
 ```sh
 # Inspect human-readable or machine-readable state.
 fledge skills status
+fledge skills status --global
 fledge skills status --json
 
 # Preview, then update one skill or every managed skill.
 fledge skills update augur --dry-run
-fledge skills update --all --dry-run
-fledge skills update --all
+fledge skills update --all --global --dry-run
+fledge skills update --all --global
 
 # Preview, then remove one manifest-owned skill.
 fledge skills uninstall augur --dry-run
-fledge skills uninstall augur
+fledge skills uninstall augur --global
 ```
 
 `status` reports `current`, `legacy`, `modified`, or `missing`. A `legacy` OpenAI entry was
@@ -143,9 +165,13 @@ The direct installer is available for debugging or environments without plugin d
 ```sh
 bin/corvid-skills list --json
 bin/corvid-skills install agent-coordination --repo /path/to/project --host codex
+bin/corvid-skills install agent-coordination --global --host claude
 bin/corvid-skills status --repo /path/to/project --json
+bin/corvid-skills status --global --json
 bin/corvid-skills update agent-coordination --repo /path/to/project --dry-run
+bin/corvid-skills update agent-coordination --global --dry-run
 bin/corvid-skills uninstall agent-coordination --repo /path/to/project --dry-run
+bin/corvid-skills uninstall agent-coordination --global --dry-run
 ```
 
 ## Design rules
@@ -154,4 +180,5 @@ bin/corvid-skills uninstall agent-coordination --repo /path/to/project --dry-run
 - Verify real public commands before documenting them.
 - Treat repository-local instructions as authoritative for that repository.
 - Never include private paths, session content, secrets, user metadata, or private-repository assumptions.
-- Make installation and lifecycle mutations explicit, manifest-owned, and repository-local.
+- Make installation and lifecycle mutations explicit, manifest-owned, and scoped
+  (repository-local or machine-global)—never silent.

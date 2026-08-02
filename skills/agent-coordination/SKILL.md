@@ -5,13 +5,24 @@ description: Coordinate CorvidLabs agents through discovery, observation, execut
 
 # Agent Coordination
 
-Use this skill before asking an agent for status, intervening in its work, or choosing a
-worktree for an agent task.
+Use this skill as the hub before asking an agent for status, intervening in its work, or
+choosing a worktree. Product detail lives in sibling skills: `let`, `rune`,
+`fledge-workflows`, and `spec-sync` / `spec-sync-routing`.
 
-## Discover first
+## Sequence
 
-For public-only work, establish facts from the confirmed repository without invoking Let's
-federated discovery:
+1. **Discover** the repository, worktree, and (when authorized) session owner.
+2. **Observe** a confirmed CLI session before sending anything.
+3. **Execute** only through the repository's declared Fledge tasks and lanes.
+4. **Verify** with Spec Sync (when the repo uses it), then Git, PR, and CI.
+
+Do not skip ahead on session titles or branch names alone.
+
+## Discover
+
+### Public-only work
+
+Stay inside the confirmed repository. Do not invoke Let:
 
 ```sh
 fledge work status
@@ -20,39 +31,34 @@ git status --short --branch
 git ls-files
 ```
 
-Read only tracked instructions and declared workflows. Do not infer ownership from a branch
-name alone. Session metadata is an activity hint, not proof that work is delivered: compare it
-with the worktree, commits, pull request, CI, and sandbox.
+Read only tracked instructions and declared workflows. Mark Let discovery **blocked** and
+continue with repository evidence. Let 0.2 project-scope finds still pull user catalogs for
+skills/agents (and related kinds) by default, and `where`/worktrees can list siblings; do
+not filter private results after they have already been read. Details and kind matrix: `let`
+skill.
 
-Let 0.2 can return user-global or sibling-worktree metadata even for project-scoped queries.
-Do not invoke it in a public-only workflow until the installed version is independently verified
-to isolate the requested repository. Mark the Let step blocked and continue with public
-repository evidence; do not filter private results after they have already been read.
+### Authorized local metadata
 
-When local agent metadata is explicitly authorized, use `fledge let --help` to select the
-narrowest supported query and treat every returned path or session identifier as private.
+When the task explicitly permits local agent metadata, use the `let` skill with the
+narrowest supported query (prefer `find worktrees` / `find sessions` with
+`--scope project`). Treat every returned path and session id as private until public
+provenance is proven independently. Do not run Let workbed write commands unless writes
+are authorized.
 
-## Observe by default
+## Observe, then intervene
 
-Use `fledge rune watch` to open a confirmed CLI-agent session in a live PTY and observe
-current work before sending anything. For a bounded, non-interactive inspection, use
-`run` with a short timeout instead.
+Confirm repository, worktree, session, and active task first. Use the `rune` skill
+(and `fledge rune run|watch --help` for the installed flag set):
 
-```sh
-fledge rune run --timeout=60 -- <agent-cli> --resume <session-id>
-fledge rune watch -- <agent-cli> --resume <session-id>
-```
+- `fledge rune run --timeout=30 --json -- <agent-cli> …` — bounded, non-interactive
+- `fledge rune watch --log=<path> -- <agent-cli> …` — live PTY; keystrokes go here
 
-## Intervene narrowly
-
-Only message an agent after confirming its session and active task. Send one scoped,
-non-conflicting instruction. Do not interrupt tests, commits, pushes, or an independent
-review merely to ask for a status update; inspect the worktree, PR, and CI instead.
+Public Rune has no separate `send` subcommand. Send **one** scoped instruction only after
+observation, and never while tests, commits, pushes, migrations, or independent review
+are in progress—inspect Git and CI instead. Never drive the same session from two
+operators, and never start a second agent in a worktree that already has an owner.
 
 ## Execute through Fledge
-
-After discovery and observation establish the correct repository and scope, inspect its
-declared automation and run only the exact task or lane needed:
 
 ```sh
 fledge run --list
@@ -61,27 +67,28 @@ fledge run <task>
 fledge lanes run <lane>
 ```
 
-Do not translate a repository workflow into ad hoc shell commands when Fledge already
-declares it. Preserve the task output and revision as execution evidence.
+Prefer declared tasks and lanes over ad hoc shell. Record task output with the exact
+revision. Details: `fledge-workflows` skill.
 
-## Verify with Spec Sync
+## Verify
 
-If the repository uses Spec Sync, read its generated local skill and installed CLI version
-before choosing commands. Run the exact project-defined coverage or check command after the
-Fledge task. A successful task is not proof that specifications cover the change, and a
-Spec Sync failure must not be hidden by approving or rewriting scope without the user.
+- If the repository uses Spec Sync, follow `spec-sync-routing` to the generated local
+  skill; use shared `spec-sync` only for version-neutral principles.
+- Spec Sync closing flow is **accept → merge → archive after merge** (not archive in the
+  delivery PR before merge). Details: `spec-sync` skill.
+- A green Fledge task is not proof that specs cover the change.
+- After any intervention, re-check worktree, PR, CI, and sandbox. Session text is an
+  activity hint, not delivery.
 
-## Verify and recover
+## Evidence hierarchy
 
-After a prompt is accepted, verify the worktree, declared Fledge workflow, Spec Sync evidence,
-and CI again; delivery is not completion. If
-the target session or worktree is wrong, stop and rediscover it within the task's privacy scope. If a provider or
-network connection fails, Rune cannot bypass it—report the boundary and rely on repository
-evidence. Assign one worktree and responsibility per agent, and use sibling-worktree context
-to avoid overlapping edits. For repeated CI failures, reproduce narrowly and add or confirm a
-regression rather than repeatedly sending broad retry prompts.
+Highest trust first: committed tree and CI on that SHA → PR and review → Fledge/Spec Sync
+results on that SHA → worktree diff → Rune/session output → Let session cards.
 
-## Source of truth
+## Recover
 
-Session metadata describes activity. The worktree, commit history, pull request, CI,
-and sandbox results determine whether work is complete.
+- Wrong session or worktree: stop; rediscover within the task's privacy scope.
+- Provider or network failure: Rune cannot bypass it; report the boundary.
+- Repeated CI failure: reproduce narrowly and add or confirm a regression—do not spam
+  retry prompts into a live session.
+- One worktree and one responsible agent per task.
