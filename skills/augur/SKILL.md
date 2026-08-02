@@ -11,17 +11,9 @@ supplements tests and review; it does not approve a change. No API key or LLM re
 
 ## Install
 
-**This catalog skill** (agent guidance):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install augur --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — use the Fledge plugin repo `CorvidLabs/fledge-plugin-augur` (not the
-standalone `augur` kit alone). The public plugin targets **macOS 13+**. The standalone
-`augur` CLI may support additional platforms; this skill documents `fledge augur` only.
-Confirm with `fledge augur --help` after install.
+Use the Fledge plugin repo `CorvidLabs/fledge-plugin-augur` (not the standalone `augur`
+kit alone). The public plugin targets **macOS 13+**. Confirm with `fledge augur --help`
+after install.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-augur

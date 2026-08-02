@@ -9,14 +9,7 @@ Atlas maps code to specifications. A spec-less result is valid evidence, not a c
 
 ## Install
 
-**This catalog skill** (agent guidance):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install atlas --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — Atlas is a Fledge plugin (`CorvidLabs/fledge-plugin-atlas`):
+Atlas is a Fledge plugin:
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-atlas

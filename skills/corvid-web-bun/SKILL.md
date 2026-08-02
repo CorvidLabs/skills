@@ -9,18 +9,6 @@ Use Bun and the repository's Fledge tasks when the project declares them. This i
 operating baseline, not a replacement for a repository's `AGENTS.md`, framework conventions,
 product specs, or an existing non-Bun package manager.
 
-## Install
-
-**This catalog skill** (engineering baseline; not a product plugin):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install corvid-web-bun --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-Requires Fledge (and Bun when the project uses it); there is no separate product package
-for this skill.
-
 ## Start with the project
 
 1. Confirm the repository root and its tracked instructions before editing:

@@ -10,16 +10,8 @@ is optional—an unsigned attestation is still a valid local record.
 
 ## Install
 
-**This catalog skill** (agent guidance):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install attest --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — use the Fledge plugin repo `CorvidLabs/fledge-plugin-attest` (not the
-standalone `attest` kit alone). The public Fledge plugin targets **macOS 13+** (no
-Linux/Windows plugin support).
+Use the Fledge plugin repo `CorvidLabs/fledge-plugin-attest` (not the standalone `attest`
+kit alone). The public Fledge plugin targets **macOS 13+**.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-attest

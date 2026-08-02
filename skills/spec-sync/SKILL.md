@@ -12,18 +12,7 @@ change in a repository that uses Spec Sync. The CLI binary is **`specsync`** (no
 
 ## Install
 
-**This catalog skill** (shared principles only — see collision notes below):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install spec-sync --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-Prefer `spec-sync-routing` plus a **repository-generated** skill when Spec Sync is
-initialized; do not overwrite generated `.codex/skills/spec-sync` (or host equivalents).
-
-**Product CLI** — Spec Sync is **not** a Fledge plugin. Install the binary separately, for
-example:
+Spec Sync is **not** a Fledge plugin. Install the **`specsync`** binary separately:
 
 ```sh
 brew install CorvidLabs/tap/spec-sync
@@ -31,6 +20,10 @@ brew install CorvidLabs/tap/spec-sync
 specsync --version
 specsync --help
 ```
+
+Prefer the repository-generated Spec Sync skill when present; this catalog entry is
+shared principles only (see collision notes below). Use `spec-sync-routing` to locate
+local truth without overwriting generated skills.
 
 ## One change workspace per delivery
 

@@ -11,31 +11,24 @@ Let can **locate** the file; this skill **validates, routes, and optionally runs
 
 ## Install
 
-**This catalog skill** (agent guidance):
+CorvidLabs/agent-3md is **not** a Fledge plugin (no `fledge agent3md`). Use the library
+or CLI below.
 
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install agent-3md --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product tooling** — CorvidLabs/agent-3md is **not** a Fledge plugin. There is no
-`fledge plugins install` / `fledge agent3md` surface.
-
-**TypeScript library** (embed; npm latest is the library path):
+**TypeScript library** (embed):
 
 ```sh
 npm install @corvidlabs/agent3md
 # or: bun add @corvidlabs/agent3md
 ```
 
-**CLI (prefer current main, not a stale crates.io-only install for `run`):**
+**CLI** (prefer current main; crates.io may lag for `run`/`--exec`):
 
 The Rust CLI on GitHub main supports `manifest`, `skills`, `route`, `get`, `resolve`,
-`validate`, and `run` (`--exec`). Published `cargo install agent3md` may lag and ship only
-the inspect/validate subset without `run`/`--exec`—verify `agent3md --help` after install.
+`validate`, and `run` (`--exec`). Published `cargo install agent3md` may ship only the
+inspect/validate subset—verify `agent3md --help` after install.
 
 ```sh
-# From a clone of CorvidLabs/agent-3md (current surface)
+# From a clone of CorvidLabs/agent-3md
 cd /path/to/agent-3md
 cargo install --path loaders/rust
 # or without a global install:
@@ -49,6 +42,7 @@ Inside the agent-3md repo:
 | Inspect / route / run | `bun run cli <cmd> …` |
 | Validate | `bun run validate <file>` (not `bun run cli validate`) |
 | Scaffold | `bun run cli new …` (TS-only) |
+
 
 ## Inspect without executing
 

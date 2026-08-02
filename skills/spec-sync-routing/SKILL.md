@@ -9,15 +9,8 @@ This is routing guidance, not a replacement for a project's Spec Sync contract.
 
 ## Install
 
-**This catalog skill** (safe to install beside a generated Spec Sync skill):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install spec-sync-routing --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — Spec Sync is not a Fledge plugin. Install `specsync` via Homebrew or cargo
-(see the `spec-sync` skill). Refresh generated host skills with `specsync agents install`.
+Spec Sync is not a Fledge plugin. Install `specsync` via Homebrew or cargo (see the
+`spec-sync` skill). Refresh generated host skills with `specsync agents install`.
 
 ## Find local truth first
 

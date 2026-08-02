@@ -11,15 +11,7 @@ agent's permissions, or turn a stale session record into a live connection.
 
 ## Install
 
-**This catalog skill** (agent guidance):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install rune --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — Rune is a Fledge plugin (`plugin.toml` name `rune`). Use the owner/repo
-form (not bare `rune`):
+Rune is a Fledge plugin. Use the owner/repo form:
 
 ```sh
 fledge plugins install CorvidLabs/rune
@@ -28,7 +20,7 @@ fledge rune run --help
 fledge rune watch --help
 ```
 
-Standalone install is also available via Homebrew (`corvidlabs/tap/rune`). Document the
+Standalone Homebrew is also available (`corvidlabs/tap/rune`). Document the
 **public CorvidLabs/rune** surface below (0.2.x: `run` / `watch` / `version`). Always
 re-check the installed plugin's `--help`—a local or forked install may expose extra flags.
 

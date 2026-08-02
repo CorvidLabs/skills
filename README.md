@@ -9,14 +9,19 @@ generated Spec Sync material.
 
 ## Quick start
 
-Install the catalog plugin, inspect it, and add only the skills a repository needs:
+Install the catalog plugin, inspect it, and add **only the skills a repository needs**
+(one skill per `install`—there is no `install --all`). Prefer a focused set over dumping
+the whole catalog into every project:
 
 ```sh
 fledge plugins install CorvidLabs/skills
 fledge skills list
 fledge skills install agent-coordination --host codex
+fledge skills install fledge-workflows --host codex
 fledge skills status
 ```
+
+`update --all` refreshes skills that are already managed; it does not install missing ones.
 
 To pin a published catalog release, add its tag to the source, for example:
 

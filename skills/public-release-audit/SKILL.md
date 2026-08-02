@@ -8,15 +8,6 @@ description: Audit a private repository for safe public release without changing
 Use this skill before making a private repository public or creating its first public
 release.
 
-## Install
-
-**This catalog skill** (practice guidance; not a product plugin):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install public-release-audit --host <codex|claude|cursor|gemini|grok|openai>
-```
-
 ## Audit the repository
 
 Check the current tree and relevant history for:

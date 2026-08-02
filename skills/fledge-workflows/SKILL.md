@@ -6,20 +6,9 @@ description: Discover and run repository-defined Fledge workflows without guessi
 # Fledge Workflows
 
 Use Fledge first when working in a CorvidLabs repository. Treat the repository's own
-tasks, lanes, plugins, and instructions as the source of truth.
-
-## Install
-
-**This catalog skill** (agent guidance for core Fledge):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install fledge-workflows --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — Fledge is the core CLI (not installed via this skills catalog). Install
-Fledge itself from CorvidLabs docs / releases; then use `fledge` as below. Repository
-plugins are separate (`fledge plugins install …`).
+tasks, lanes, plugins, and instructions as the source of truth. Fledge is the core CLI
+(not a product plugin). Extra tools come from `fledge plugins install …` when a repository
+needs them.
 
 ## Discover before running
 

@@ -10,16 +10,8 @@ planes). Use `agent-3md` for executable agent manifests (`agent.3md`).
 
 ## Install
 
-**This catalog skill** (agent guidance):
-
-```sh
-fledge plugins install CorvidLabs/skills
-fledge skills install three-md --host <codex|claude|cursor|gemini|grok|openai>
-```
-
-**Product CLI** — CorvidLabs/3md is **not** a Fledge plugin. There is no
-`fledge plugins install` for `threemd`. Use the package CLI from a clone (or the project's
-declared entrypoint):
+CorvidLabs/3md is **not** a Fledge plugin—there is no `fledge plugins install` for
+`threemd`. Use the package CLI from a clone (or the project's declared entrypoint).
 
 ## Use the repository CLI
 
