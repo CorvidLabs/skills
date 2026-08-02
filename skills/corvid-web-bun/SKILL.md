@@ -5,28 +5,32 @@ description: Build, modify, test, review, or release CorvidLabs Bun web projects
 
 # CorvidLabs Web with Bun
 
-Use Bun and the repository's Fledge tasks. This is a shared operating baseline, not a
-replacement for a repository's `AGENTS.md`, framework conventions, or product specs.
+Use Bun and the repository's Fledge tasks when the project declares them. This is a shared
+operating baseline, not a replacement for a repository's `AGENTS.md`, framework conventions,
+product specs, or an existing non-Bun package manager.
 
 ## Start with the project
 
-1. Confirm the current public repository and its tracked instructions before editing:
+1. Confirm the repository root and its tracked instructions before editing:
 
    ```sh
    fledge work status
    fledge run --list
+   fledge introspect --json
    git status --short --branch
    git ls-files
    ```
 
-   Do not use federated Let discovery in public-only work: Let 0.2 can enumerate user-global
-   or sibling-worktree metadata even for project-scoped queries.
+   In public-only or public-evidence work, do not use federated Let discovery (project-scope
+   still pulls user skill catalogs by default). When local agent metadata is explicitly
+   authorized, use the `let` skill.
 
-2. Read the project instructions, `package.json`, and the affected spec or component.
+2. Read the project instructions, `package.json` / lockfile, and the affected spec or component.
 3. Use the Fledge task named by the project. Inspect available tasks if it is unclear:
 
    ```sh
    fledge run --help
+   fledge lanes list
    fledge lanes --help
    ```
 
@@ -36,9 +40,11 @@ defines an authoritative lane.
 ## Build with Bun
 
 - Use Bun for dependencies and scripts when `package.json`, the lockfile, and local instructions
-  declare Bun. Preserve another explicitly selected package manager, especially in workspaces;
+  declare Bun. Prefer `bun install`, `bun test`, `bun run <script>`, and `bun <file>`.
+  Preserve another explicitly selected package manager, especially in workspaces;
   never introduce a second lockfile merely to apply this baseline.
-- Prefer `Bun.serve()` for a Bun server and Bun's built-in APIs before adding a server
+- Prefer `Bun.serve()` for a Bun server and Bun's built-in APIs (`Bun.file`, `bun:sqlite`,
+  `Bun.redis`, `Bun.sql` where the project already uses them) before adding a server
   framework or runtime dependency.
 - Keep TypeScript strict. Model uncertain external values as `unknown`, then validate
   them at the boundary; do not introduce `any` to make a build pass.
@@ -80,4 +86,5 @@ local paths.
 
 If the change affects public behavior, API shape, configuration, or documentation, keep
 the corresponding project spec in the same pull request. Use the shared `spec-sync`
-skill and the repository-generated Spec Sync skill for the lifecycle details.
+skill and the repository-generated Spec Sync skill for the lifecycle details. For revision-
+tied CI language, use `ci-release-hygiene`.

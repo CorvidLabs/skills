@@ -5,31 +5,55 @@ description: Verify or record reviewed commit provenance, policy gates, and audi
 
 # Attest
 
-Attest records review evidence for exact commits. The public plugin is currently macOS-only.
-
-## Verify before writing
+Attest records review evidence for exact commits in Git notes (`refs/notes/attest`). The
+public Fledge plugin targets **macOS 13+** (no Linux/Windows plugin support). Signing is
+optional—an unsigned attestation is still a valid local record.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-attest
 fledge attest --help
-fledge attest log -C . --json
-fledge attest verify -C . --commit <sha> --policy --json
-fledge attest verify -C . --range <base>..<head> --policy --json
+fledge attest help sign
+fledge attest help verify
 ```
 
-Treat a missing or failed attestation as evidence to investigate, not permission to fabricate one.
+## Verify before writing
+
+```sh
+fledge attest log -C . --json
+fledge attest verify -C . --commit <sha> --json
+fledge attest verify -C . --range <base>..<head> --json
+```
+
+Policy loads from `.attest.json` in the current working directory when present. Override
+with `--policy <path>` only when using a non-default file (the path must exist). Treat a
+missing or failed attestation as evidence to investigate, not permission to fabricate one.
 
 ## Record proven evidence
 
-Sign the exact reviewed SHA only after the verdict, confidence, tests, and reviewer identity are known:
+Sign or record the exact reviewed SHA only after the verdict, confidence, tests, and
+reviewer identity are known:
 
 ```sh
 fledge attest sign -C . --commit <sha> --reviewer <identity> --confidence <0-to-1> \
-    --verdict <proceed-or-review-or-block> --note <summary> --sign --json
+    --verdict <proceed-or-review-or-block> --note <summary> --json
+
+# Optional cryptographic signature (requires a signing key; generate with
+# `fledge attest keygen` when that subcommand is present on the installed plugin)
+fledge attest sign -C . --commit <sha> --reviewer <identity> --confidence <0-to-1> \
+    --verdict proceed --sign --json
+
+# Optional: fold in prior Augur JSON (file path or `-` for stdin)
+fledge attest sign -C . --commit <sha> --reviewer <identity> --from-augur <file-or--> --json
 ```
 
-Add `--tests-passed` or `--human-approved` only when each statement is true. Signing requires
-configured key material and authorization. Attestations live in Git notes under
-`refs/notes/attest`; publishing those notes is a separate remote write.
+Add `--tests-passed` or `--human-approved` only when each statement is true. Publishing
+`refs/notes/attest` is a separate remote write from creating the local note.
 
-Use `fledge attest export -C . --json` for an audit artifact, and preserve the commit SHA with every result.
+`export` always emits JSON (no `--json` flag):
+
+```sh
+fledge attest export -C .
+fledge attest export -C . --range <base>..<head> --policy .attest.json
+```
+
+Preserve the commit SHA with every result.

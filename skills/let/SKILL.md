@@ -5,25 +5,32 @@ description: Discover authoritative CorvidLabs agent, session, worktree, instruc
 
 # Let Discovery
 
-Let is a locator and read-only context source; it does not expose an agent's private live
-reasoning and it does not deliver prompts. Use it only when the task permits discovery of
-local agent metadata.
+Let is a host-neutral locator and workbed for agent assets. **Discovery commands**
+(`doctor`, `where`, `find`, `show`, `open`, `context`, `history`, skill routing) are
+read-oriented. **Workbed commands** (`init`, `worktree add|remove`, `memory set|delete`,
+`super init-example`) can write under project or user `.let` paths—do not use them unless
+the task authorizes local writes.
 
-## Public-only boundary
+Let does not send prompts to an agent or expose live model reasoning. Install and prefer
+the Fledge entrypoint (the shell builtin `let` is unrelated):
 
-Read-only does not mean public-safe. Let 0.2 discovery is federated: even a `--scope project`
-query can enumerate user-global instructions or sibling-worktree paths. `doctor`, `where`,
-`context`, `find`, `history`, and skill routing can therefore touch local metadata outside the
-public repository.
+```sh
+fledge plugins install CorvidLabs/let
+fledge let --help
+```
 
-Do not invoke Let in a public-only workflow unless the installed version has been independently
-verified to isolate the requested repository. Never rely on filtering or redaction after a broad
-query, because the private metadata has already been read. Use repository-local Git and Fledge
-facts instead, and report the Let discovery step as blocked by its current isolation boundary.
+Let **0.2** indexes host assets in place (federation over relocation). Cards first; bodies
+on demand via `show` / `open`.
 
-## Start with the local facts
+## Two modes
 
-For public-only work, stay within the confirmed repository:
+### Public-only (default when publishing or working from public evidence)
+
+Do **not** invoke Let. Discovery can surface local host metadata outside the public
+repository (`doctor` lists host homes; project-scope finds still pull user catalogs for
+some kinds by default). Never rely on filtering or redaction after a broad query.
+
+Stay inside the confirmed repository:
 
 ```sh
 fledge work status
@@ -32,28 +39,61 @@ git status --short --branch
 git ls-files
 ```
 
-Read only tracked repository instructions and declared workflows. Do not inspect sibling
-worktrees, user-level agent directories, sessions, or global instruction roots. Do not infer
-ownership from a branch name or a stale session title.
+Report the Let step as **blocked** by the current isolation boundary and continue with
+repository-local Git and Fledge facts.
 
-## Find the right asset
+### Authorized local metadata
 
-When local metadata discovery is explicitly in scope, inspect the installed command surface
-before selecting the narrowest query:
+Use Let only when the task explicitly permits discovery of local agent metadata. Inspect
+help, then choose the **narrowest** query. Prefer exact identifiers over a full context pack.
 
 ```sh
-fledge let --help
+fledge let doctor --json
+fledge let where .
+fledge let find worktrees --scope project --json
+fledge let find sessions --scope project --json
+fledge let find skills --query <text> --json
+fledge let find agents --json
+fledge let skill route "<request>" --json
+fledge let show skill <id-or-name> --json
+fledge let open <path> --json
+fledge let context --pack brief --json
+fledge let history --scope project --json
 ```
 
-Prefer an exact identifier over a broad context pack. Treat returned paths and session metadata
-as private unless their public provenance is independently established.
+Kinds include: `instructions`, `skills`, `agents`, `commands`, `worktrees`, `sessions`,
+`tasks`, `memory`, `mcp`, `plugins`, `workflows`, `superskills`.
+
+Scopes: `project` | `user` | `all`. Start with `project` when authorized; widen only with
+cause. **`history` defaults to `user` if `--scope` is omitted**—always pass
+`--scope project` for repo-bounded history.
+
+### Project-scope privacy matrix (0.2)
+
+`--scope project` is **not** uniformly isolated:
+
+| Safer under project scope | Still can pull user-global / sibling context |
+| --- | --- |
+| `sessions`, `memory`, `tasks` (repo-bound by design) | `skills`, `agents`, `commands`, `workflows` (user catalogs included by default via `find.include_user_skills`) |
+| | `instructions` may include user-level CLAUDE.md / AGENTS.md |
+| | `worktrees` / `where` can list sibling worktrees for the same repo |
+
+Treat every returned path and session identifier as private unless public provenance is
+independently established. `context` does not include sessions—call `find sessions`
+explicitly when needed. Session and memory cards are path-oriented, not full transcripts.
+
+Optional local dashboard (still local metadata; not for public-only work):
+
+```sh
+fledge let web
+```
 
 ## Freshness and limits
 
-- Treat session records as activity hints, not proof of completed work.
+- Session records are activity hints, not proof of completed work.
 - Compare session timestamps with the worktree, commits, pull request, CI, and sandbox.
 - A missing session does not prove no work exists; discovery only indexes configured hosts.
-- Let can locate a session and its context, but cannot read live model reasoning, bypass a
-  provider connection, or send a message.
+- Let cannot bypass a provider connection or message an agent.
 
-When intervention is needed, pass the confirmed session and worktree to the Rune skill.
+When intervention is needed, pass the confirmed session and worktree to the `rune` skill.
+For the full coordination sequence, use `agent-coordination`.
