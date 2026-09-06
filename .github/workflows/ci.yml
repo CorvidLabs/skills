@@ -62,8 +62,11 @@ jobs:
 
           with open(sys.argv[1], encoding="utf-8") as source:
               catalog = json.load(source)
-          assert len(catalog["skills"]) == 15
-          assert catalog["skills"] == sorted(catalog["skills"])
+          from pathlib import Path
+
+          expected = sorted(path.parent.name for path in Path("skills").glob("*/SKILL.md"))
+          assert expected, "source catalog is empty"
+          assert catalog["skills"] == expected, catalog
           PY
 
           for host in codex claude cursor gemini grok openai; do
@@ -81,13 +84,15 @@ jobs:
             done < <(fledge skills list)
 
             fledge skills status --repo "$test_repo" --json > "$test_root/$host-status.json"
-            python3 - "$test_root/$host-status.json" "$host" <<'PY'
+            python3 - "$test_root/$host-status.json" "$host" "$test_root/catalog.json" <<'PY'
           import json
           import sys
 
           with open(sys.argv[1], encoding="utf-8") as source:
               status = json.load(source)
-          assert len(status["installs"]) == 15
+          with open(sys.argv[3], encoding="utf-8") as source:
+              catalog = json.load(source)
+          assert sorted(item["skill"] for item in status["installs"]) == catalog["skills"]
           assert {item["host"] for item in status["installs"]} == {sys.argv[2]}
           assert {item["state"] for item in status["installs"]} == {"current"}
           PY
