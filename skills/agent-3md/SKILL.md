@@ -21,11 +21,11 @@ npm install @corvidlabs/agent3md
 # or: bun add @corvidlabs/agent3md
 ```
 
-**CLI** (prefer current main; crates.io may lag for `run`/`--exec`):
+**CLI** (select a supported release with the capabilities the task needs):
 
-The Rust CLI on GitHub main supports `manifest`, `skills`, `route`, `get`, `resolve`,
-`validate`, and `run` (`--exec`). Published `cargo install agent3md` may ship only the
-inspect/validate subset—verify `agent3md --help` after install.
+Inspect `agent3md --help` for `manifest`, `skills`, `route`, `get`, `resolve`,
+`validate`, and `run` (`--exec`). Package-manager builds may lag the supported release;
+check current upstream release guidance before choosing an install source.
 
 ```sh
 # From a clone of CorvidLabs/agent-3md
@@ -56,8 +56,8 @@ agent3md resolve agent.3md <skill-name>
 ```
 
 If `validate` rejects a modern manifest after `cargo install agent3md` from crates.io, use
-repo-local `bun run validate` or a git/`--path` install of the current loader—published
-crates.io **0.1.0** still requires `model:` in frontmatter and does not ship `run`/`--exec`.
+the compatible repo-local validator or a supported loader release. Do not add obsolete
+manifest fields merely to satisfy an older validator.
 
 ## Preview, then execute only when authorized
 

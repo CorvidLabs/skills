@@ -36,7 +36,19 @@ fallback; do not invent a new universal command. Prefer common lane names when p
 (`pre-commit`, `check`, `verify`, `ci`) after listing—do not invent a `trust` lane name.
 
 For agent runs, set non-interactive mode (`--non-interactive` / `--ni` or
-`FLEDGE_NON_INTERACTIVE=1`) so prompts fail closed instead of hanging.
+`FLEDGE_NON_INTERACTIVE=1`) to avoid hanging on prompts. This mode accepts default confirmations; it is not a
+permission check. Use it only for actions already authorized by the task.
+
+## Select tools by capability
+
+Prefer the current maintainer-designated release, including the latest RC when that is
+the supported path forward. Do not downgrade to an older stable line just to avoid a
+prerelease suffix. Check upstream release guidance when installing or upgrading; keep
+reproducible pins in the repository and CI rather than in shared skills. An installed
+version tells you which commands can run now, not which version should be preferred.
+
+Use `trust` for repositories with a composed Trust gate and `spec-sync-routing` for
+SpecSync lifecycle guidance. Preserve existing pins until an upgrade is in scope.
 
 ## Work deliberately
 

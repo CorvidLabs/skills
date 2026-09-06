@@ -1,73 +1,80 @@
 ---
 name: spec-sync
-description: Keep project specs and code synchronized with Spec Sync while using one clear change workflow.
+description: Keep project contracts, implementation, and verification evidence synchronized through the SpecSync change lifecycle.
 ---
 
 # Spec Sync
 
-Use this baseline whenever code, tests, public documentation, schemas, or configuration
-change in a repository that uses Spec Sync. The CLI binary is **`specsync`** (not
-`spec-sync`). Exact verbs and paths come from the **installed** binary and the
-**repository-generated** local skill—not from this shared catalog entry.
+Use this baseline for meaningful source, test, public documentation, schema, or
+configuration changes in a repository using SpecSync. Keep requirements, module contracts,
+implementation, and test evidence together through delivery.
 
-## Install
+## Discover the supported workflow
 
-Spec Sync is **not** a Fledge plugin. Install the **`specsync`** binary separately:
+Use repository-defined Fledge tasks and lanes first. `fledge spec` exposes part of
+SpecSync; inspect its help before using it. For lifecycle operations it does not expose,
+use the independently distributed **`specsync`** binary. Discover installed plugins too;
+a wrapper's presence does not imply it supports the full lifecycle.
 
 ```sh
-brew install CorvidLabs/tap/spec-sync
-# or: cargo install specsync
+fledge spec --help
 specsync --version
-specsync --help
+specsync change --help
 ```
 
-Prefer the repository-generated Spec Sync skill when present; this catalog entry is
-shared principles only (see collision notes below). Use `spec-sync-routing` to locate
-local truth without overwriting generated skills.
+Prefer the current supported workflow, including the latest maintainer-designated release
+candidate while the next release is being qualified. Do not choose an older stable line
+merely because it lacks an RC suffix. Resolve the actual release from
+[upstream releases](https://github.com/CorvidLabs/spec-sync/releases) when installation or
+an upgrade is needed; package-manager defaults may lag. Keep exact tool pins in project
+configuration and CI, not in this shared skill.
+
+Read the repository-generated skill and configuration for its command syntax, paths,
+policy, and migration state. If the installed binary or generated instructions describe
+an older workflow, identify the mismatch and use the documented upgrade/migration path
+within the task's scope. Do not silently reinterpret an existing change ledger.
 
 ## One change workspace per delivery
 
-Keep plan, requirements, context, testing notes, semantic deltas, implementation, and
-tests together in one change workspace through closing. Use the repository's generated
-Spec Sync skill and configuration for the exact commands and file requirements.
+1. Read the affected canonical specs and available companions. Define intent, affected
+   modules and paths, semantic deltas, and acceptance criteria in one change workspace.
+   Use `change new` and `change answer` as documented; fill only the artifacts selected
+   for the change. Requirements need stable identifiers and testable outcomes.
+2. Obtain the single digest-bound scope approval and record it with `change approve`.
+   Never invent or self-grant approval. Reuse explicit user approval when it covers the
+   exact definition; changed scope requires renewed approval.
+3. Implement code, canonical contracts, and tests together on the delivery branch.
+4. Run `change check <id>` for scoped verification and the repository's relevant Fledge
+   checks. Apply stronger checks when repository policy or the change requires them.
+   `change audit` checks active workspaces and living specs; archives are historical
+   evidence, not a mandatory full-history validation pass on every edit.
+5. Complete ordinary PR review and the required scoped review of the implementation,
+   contract delta, and evidence. Record the actual reviewer with `change review`; do not
+   manufacture identities or treat a local record as a required GitHub approval.
+6. Run `change finalize <id>` before merge. Inspect and commit the resulting
+   metadata/archive-only changes on the same delivery PR, then satisfy its current
+   checks and merge through the repository's normal GitHub workflow.
 
-## Core flow
+Finalization closes and archives the reviewed package in the delivery PR. Do not add a
+separate closing-approval ceremony or postpone archive until after merge for new changes.
+Legacy accept/archive commands are for the workflow or repair path that actually requires
+them; consult local migration guidance for an existing legacy change.
 
-1. Read the affected canonical spec and available companion files.
-2. Create and define the change; obtain **definition approval**
-   (commonly `specsync change approve`)—a human, digest-bound gate. Do not self-grant.
-3. Implement code, canonical spec updates, and tests together after approval.
-4. Run the repository's bidirectional checks and ordinary review
-   (commonly `specsync check --strict` when that is what the local skill requires).
-5. Obtain **closing approval** and **accept** on the delivery branch
-   (commonly `specsync change accept`)—a second human gate, not covered by definition
-   approval.
-6. **Merge** the delivery branch.
-7. **`change archive` after merge** (separately). Do not archive while the active change
-   still covers unmerged delivery paths; archiving before merge can fail and is not the
-   product flow.
+Edits to delivery inputs can invalidate verification or review evidence. Finish those
+edits before recording evidence, and rerun the affected checks when it becomes stale.
+Use `change status <id>` for the next action and handoff readiness instead of guessing
+which lifecycle command will clear a blocker.
 
-Renew definition approval when the stable user-facing scope, affected area, or semantic
-requirement changes—not when implementation evidence, tests, review output, or archival
-metadata changes. Closing approval is always its own gate.
+## Preserve context and generated guidance
 
-## Context and learning
+Keep durable decisions in `context.md` or its project equivalent and requirement-to-test
+evidence in `testing.md`. Update companions that exist or are required; do not create
+empty files for ceremony. Preserve accepted history and use a successor change for new
+behavior rather than rewriting historical evidence.
 
-Use `context.md` or the project equivalent for relevant decisions and prior lessons;
-record regression coverage in `testing.md`. Keep archives immutable. Later work that
-changes a prior capability normally creates a successor change rather than rewriting the
-old accepted record.
-
-## Project-specific generation
-
-The catalog entry and a repository-generated skill both use host paths such as
-`.codex/skills/spec-sync` (also `.claude`, `.cursor`, `.gemini` when installed). Do not
-install this shared entry over an existing generated skill, and do not install it first
-when generation will immediately replace it. In an initialized repository, prefer the
-generated local skill and install the non-colliding `spec-sync-routing` catalog skill when
-shared routing guidance is useful.
-
-Refresh generated agent guidance only with the installed version's documented command
-(commonly `specsync agents install`), then inspect the resulting diff. Public documentation
-on the default branch may describe an unreleased version; the installed binary and generated
-skill are authoritative.
+The shared catalog and generated skill can both target `.codex/skills/spec-sync` (and
+other host equivalents). Prefer the generated local skill; never overwrite it with this
+catalog entry. Use `spec-sync-routing` beside it for shared routing guidance. Refresh
+with the selected binary's documented generator, commonly `specsync agents install`,
+and inspect the diff. Project layout markers are not binary version pins; let supported
+migration commands manage them.

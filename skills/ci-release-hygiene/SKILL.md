@@ -36,7 +36,9 @@ fledge lanes run <verify-or-equivalent>
 
 Keep the lane focused while iterating, and run the project-required full or release lane
 before declaring a PR ready. When configured, deterministic risk gates (`augur`) and
-provenance checks (`attest`) belong on the same SHA you intend to push.
+provenance checks (`attest`) belong on the revision/range selected by repository policy.
+When Trust composes these layers, use the `trust` skill and its configured gate; report
+whether provenance covers the proposed commits or the baseline.
 
 ## Before tag or release
 
@@ -51,6 +53,11 @@ Do not tag from uncommitted work or rely on verification evidence produced befor
 final release-candidate commit. Prefer the repository's `fledge release` flow and its verify/release-style lanes (discover
 via `fledge lanes list`) when present—lane names are repository-defined, not universal.
 After a release bump creates a new commit, re-verify **that** SHA—not the pre-bump tree.
+
+Prefer the maintainer-designated release candidate when that is the supported toolchain.
+Resolve exact releases when updating binary and Action pins; an RC suffix alone is not a
+reason to retain an older stable workflow. Verify compatibility and required checks on
+the actual candidate.
 
 ## Communicate state clearly
 

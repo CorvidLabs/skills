@@ -18,8 +18,9 @@ fledge plugins install CorvidLabs/rune
 fledge rune --help
 ```
 
-Standalone Homebrew is also available (`corvidlabs/tap/rune`). Always re-check the installed
-plugin's `--help` — this document describes 0.8.x, and a local or forked install may differ.
+Standalone Homebrew is also available (`corvidlabs/tap/rune`). Check the installed
+plugin's `--help`; command and session capabilities can advance independently of this
+shared skill.
 
 ## Commands
 
@@ -33,6 +34,11 @@ plugin's `--help` — this document describes 0.8.x, and a local or forked insta
 `session` is the model to reach for when driving another agent across more than one turn. Its
 subcommands are `start`, `send`, `read`, `attach`, `list`, `stop`, `archive`. The child outlives the
 `rune` process that started it: `start` returns immediately, and a detached supervisor owns the pty.
+
+Inspect `fledge rune session --help`, then read the confirmed session before sending input.
+Use `session send` only after confirming its installed syntax and authorization to
+intervene. Prefer reading an existing session over launching a resume probe that might
+create a competing process. Keep discovery within the authorized project scope.
 
 ```sh
 fledge rune session start --name=reviewer -- <agent-cli>
@@ -131,6 +137,7 @@ Terminal text is not committed or CI-verified work.
 - If the CLI asks for confirmation, do not assume edits happened; verify the worktree.
 - If the provider or network is unavailable, stop retrying. Rune cannot bypass that boundary.
 - If a reply looks like your own prompt, it probably is — see the settle limitation above.
+- If output is huge or hard to parse, use supported output bounds or a `watch` log.
 - If a session is no longer valid, return to authorized Let discovery (or public repo facts)
   and select the current owner.
 
