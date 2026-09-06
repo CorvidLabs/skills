@@ -21,8 +21,8 @@ fledge rune watch --help
 ```
 
 Standalone Homebrew is also available (`corvidlabs/tap/rune`). Document the
-**public CorvidLabs/rune** surface below (0.2.x: `run` / `watch` / `version`). Always
-re-check the installed plugin's `--help`—a local or forked install may expose extra flags.
+supported command surface by checking the installed plugin's `--help`; command and
+session capabilities can advance independently of this shared skill.
 
 ## Commands
 
@@ -30,10 +30,19 @@ re-check the installed plugin's `--help`—a local or forked install may expose 
 | --- | --- |
 | `run` | Non-interactive PTY: run a command, capture output, exit |
 | `watch` | Interactive passthrough: live TTY + NDJSON event log |
+| `session` | Start, read, send input to, attach to, or stop persistent named PTYs |
 | `version` | Show rune version / environment |
 
-There is **no** separate `send` subcommand. Operators type into `watch`; agents typically
-use `run` for bounded inspection, or tail the `watch` log while a human drives.
+Operators can type into `watch`. For persistent sessions, inspect
+`fledge rune session --help`, then read the confirmed session before sending input:
+
+```sh
+fledge rune session read --name=<confirmed-name> --screen --tail=80
+```
+
+Use `session send` only after confirming its installed syntax and authorization to
+intervene. Prefer reading an existing session over launching a resume probe that might
+create a competing process. Keep discovery within the authorized project scope.
 
 ```sh
 # Bounded status / resume probe (default timeout 30s)
@@ -52,9 +61,10 @@ Useful flags (before `--`):
 - `watch`: `--log=PATH` (omit to use a temp file announced as `log_path`)
 - Global: `--json`, `--ndjson`
 
-JSON `run` results include both `clean_output` (ANSI-stripped) and `raw_output`—there is
-no separate `--raw` or `--max-output` flag. `watch` requires a real stdin TTY and cannot
-be nested under `run`.
+JSON `run` results include both `clean_output` (ANSI-stripped) and `raw_output`.
+Do not transfer flags between commands: for example, `session read` supports output
+bounds such as `--max-output`, but `run` has its own flag set. `watch` requires a real
+stdin TTY and cannot be nested under `run`.
 
 Keep `run` timeouts short when only inspecting. Preserve the `watch` event log when it is
 useful handoff evidence. Terminal text is not committed or CI-verified work.
@@ -75,7 +85,7 @@ a second agent in the same worktree.
 - If the CLI asks for confirmation, do not assume edits happened; verify the worktree.
 - If the provider or network is unavailable, stop retrying. Rune cannot bypass that boundary.
 - If output is huge or hard to parse, narrow the wrapped command or use `watch` with an
-  explicit log instead of inventing truncation flags.
+  explicit log, or use supported `session read` output bounds.
 - If a session is no longer valid, return to authorized Let discovery (or public repo facts)
   and select the current owner.
 

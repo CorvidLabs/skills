@@ -68,9 +68,10 @@ Scopes: `project` | `user` | `all`. Start with `project` when authorized; widen 
 cause. **`history` defaults to `user` if `--scope` is omitted**—always pass
 `--scope project` for repo-bounded history.
 
-### Project-scope privacy matrix (0.2)
+### Project-scope privacy boundary
 
-`--scope project` is **not** uniformly isolated:
+Check the installed tool's scope semantics and configuration before discovery.
+`--scope project` alone is not proof of isolation; federated discovery can behave as follows:
 
 | Safer under project scope | Still can pull user-global / sibling context |
 | --- | --- |

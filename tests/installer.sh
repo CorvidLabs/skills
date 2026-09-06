@@ -19,7 +19,7 @@ import json
 import sys
 
 data = json.load(sys.stdin)
-assert len(data["skills"]) == 15
+assert len(data["skills"]) == 16
 assert data["skills"] == sorted(data["skills"])
 '
 for skill in \
@@ -33,7 +33,8 @@ for skill in \
     fledge-workflows \
     public-release-audit \
     spec-sync-routing \
-    three-md
+    three-md \
+    trust
 do
     "$installer" list | grep -qx "$skill"
     skill_repo="$test_dir/$skill"

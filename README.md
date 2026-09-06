@@ -60,6 +60,7 @@ fledge plugins install CorvidLabs/skills@v0.2.0
 
 | Skill | Purpose |
 | --- | --- |
+| `trust` | Adopt, diagnose, and run the composed contract, verification, risk, and provenance gate. |
 | `augur` | Inspect deterministic Git change risk and apply explicit review or block gates. |
 | `attest` | Verify or record provenance evidence for exact reviewed commits. |
 | `atlas` | Map specifications to ownership, drift, review queues, and coverage gaps. |

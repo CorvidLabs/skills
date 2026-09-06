@@ -1,0 +1,4 @@
+interface:
+  display_name: "Trust"
+  short_description: "Run and diagnose the composed repository trust gate"
+  default_prompt: "Use $trust to inspect this repository's Trust policy and diagnose or verify its configured gate."

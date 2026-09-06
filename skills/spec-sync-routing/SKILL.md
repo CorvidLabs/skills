@@ -9,8 +9,10 @@ This is routing guidance, not a replacement for a project's Spec Sync contract.
 
 ## Install
 
-Spec Sync is not a Fledge plugin. Install `specsync` via Homebrew or cargo (see the
-`spec-sync` skill). Refresh generated host skills with `specsync agents install`.
+Use the repository's Fledge integration where it covers the operation; use the
+independent `specsync` binary for the remaining lifecycle commands. See `spec-sync`
+for release selection, including preferred RCs. Refresh generated host skills with the
+selected binary's documented generator, commonly `specsync agents install`.
 
 ## Find local truth first
 
@@ -20,17 +22,19 @@ canonical specs before choosing commands or editing lifecycle files:
 1. Confirm the CLI: `specsync --version` (binary name is **`specsync`**, not `spec-sync`).
 2. Find project config (often `.specsync/config.toml`; also `.specsync/config.json` or
    `.specsync.toml` in some repos) and `specs/`.
-3. Find the generated host skill after `specsync agents install` (exact host paths come
-   from that command), for example:
+3. Read the existing generated host skill before refreshing it. Host paths may include:
    - `.codex/skills/spec-sync`
    - `.claude/skills/spec-sync`
    - `.cursor/skills/spec-sync`
    - `.gemini/skills/spec-sync`
 4. Use the shared catalog `spec-sync` skill for **principles only** (including
-   accept → merge → archive-after-merge).
+   scope approval → implement → check → review → finalize in the delivery PR → merge).
 
 The local generated skill and configuration are authoritative for that repository's
-command syntax, paths, policy, and validation.
+command syntax, paths, policy, and validation. Check that they match the selected
+binary and supported workflow; stale generated guidance is a reason to inspect the
+documented migration path, not to prefer a legacy release. Never overwrite an existing
+change ledger to force a newer workflow.
 
 If the repository can generate or refresh its local Spec Sync skill, do that after
 installing this non-colliding routing entry. Do not install the shared `spec-sync` catalog

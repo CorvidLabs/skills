@@ -32,7 +32,7 @@ git ls-files
 ```
 
 Read only tracked instructions and declared workflows. Mark Let discovery **blocked** and
-continue with repository evidence. Let 0.2 project-scope finds still pull user catalogs for
+continue with repository evidence. Let project-scope finds can pull user catalogs for
 skills/agents (and related kinds) by default, and `where`/worktrees can list siblings; do
 not filter private results after they have already been read. Details and kind matrix: `let`
 skill.
@@ -53,7 +53,8 @@ Confirm repository, worktree, session, and active task first. Use the `rune` ski
 - `fledge rune run --timeout=30 --json -- <agent-cli> …` — bounded, non-interactive
 - `fledge rune watch --log=<path> -- <agent-cli> …` — live PTY; keystrokes go here
 
-Public Rune has no separate `send` subcommand. Send **one** scoped instruction only after
+For persistent sessions, discover `fledge rune session --help`; use its read/send
+operations when supported. Send **one** scoped instruction only after
 observation, and never while tests, commits, pushes, migrations, or independent review
 are in progress—inspect Git and CI instead. Never drive the same session from two
 operators, and never start a second agent in a worktree that already has an owner.
@@ -74,8 +75,10 @@ revision. Details: `fledge-workflows` skill.
 
 - If the repository uses Spec Sync, follow `spec-sync-routing` to the generated local
   skill; use shared `spec-sync` only for version-neutral principles.
-- Spec Sync closing flow is **accept → merge → archive after merge** (not archive in the
-  delivery PR before merge). Details: `spec-sync` skill.
+- Current SpecSync changes finalize and archive in the delivery PR before merge. Use
+  the local migration guidance for legacy changes. Details: `spec-sync` skill.
+- When Trust is configured, run its composed gate and distinguish its result from
+  required PR approval. Details: `trust` skill.
 - A green Fledge task is not proof that specs cover the change.
 - After any intervention, re-check worktree, PR, CI, and sandbox. Session text is an
   activity hint, not delivery.
