@@ -10,9 +10,10 @@ This is routing guidance, not a replacement for a project's Spec Sync contract.
 ## Install
 
 Use the repository's Fledge integration where it covers the operation; use the
-independent `specsync` binary for the remaining lifecycle commands. See `spec-sync`
-for release selection, including preferred RCs. Refresh generated host skills with the
-selected binary's documented generator, commonly `specsync agents install`.
+independent `specsync` binary for the remaining lifecycle commands. See
+`spec-sync` for release selection and the shipped 6.0 workflow. Refresh generated
+host skills with the selected binary's documented generator, commonly
+`specsync agents install`.
 
 ## Find local truth first
 
@@ -27,8 +28,7 @@ canonical specs before choosing commands or editing lifecycle files:
    - `.claude/skills/spec-sync`
    - `.cursor/skills/spec-sync`
    - `.gemini/skills/spec-sync`
-4. Use the shared catalog `spec-sync` skill for **principles only** (including
-   scope approval → implement → check → review → finalize in the delivery PR → merge).
+4. Use the shared catalog `spec-sync` skill for **principles only**.
 
 The local generated skill and configuration are authoritative for that repository's
 command syntax, paths, policy, and validation. Check that they match the selected
