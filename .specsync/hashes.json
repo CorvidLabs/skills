@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "hashes": {
+    ".specsync/config.toml": "a0b33ecbba81a0799d176051eccc8b3fbca744ddcceb0cf882bab0441e9d0119",
+    "bin/corvid-skills": "75ce5bff26e3390ca23e71dd60e4198f470f28791c674a3803e615009a04bac2",
+    "bin/fledge-skills": "dd28ea84fb9d235251b3718e77af90bf326f25c536410f1fd2f00ebe0c10cd9c",
+    "specs/corvid-skills/corvid-skills.spec.md": "167c25b889df5c4b604316b0c03d3722956deee7a20d560229498b3f11f024a6"
+  },
+  "snapshots": {
+    "specs/corvid-skills/corvid-skills.spec.md": {
+      "snapshot_version": 1,
+      "spec_path": "specs/corvid-skills/corvid-skills.spec.md",
+      "errors": [],
+      "warnings": [],
+      "notices": [],
+      "input_digest": "94c43143dd19606eb923f606685e84850f05f12c6704784baf83bd89b5557f06",
+      "snapshot_digest": "f7ea2ea1e517db55285435b5de09fe2bbad19c40f4ef9c7184cce8c3693c0d60"
+    }
+  }
+}
