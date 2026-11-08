@@ -1,0 +1,4 @@
+interface:
+  display_name: "Chough Routing"
+  short_description: "Find and resume the product-owned Chough workflow"
+  default_prompt: "Use $chough-routing to locate this project's Chough workflow bundle and resume from current status and gates."

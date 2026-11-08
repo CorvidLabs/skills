@@ -23,7 +23,8 @@ import json
 import sys
 
 data = json.load(sys.stdin)
-assert len(data["skills"]) == 16
+assert {"hi", "chough-routing", "herdr-core"} <= set(data["skills"]), data
+assert len(data["skills"]) == 19
 assert data["skills"] == sorted(data["skills"])
 '
 for skill in \
@@ -32,9 +33,12 @@ for skill in \
     attest \
     augur \
     ci-release-hygiene \
+    chough-routing \
     corvid-swift-package \
     corvid-web-bun \
     fledge-workflows \
+    herdr-core \
+    hi \
     public-release-audit \
     spec-sync-routing \
     three-md \
@@ -47,6 +51,41 @@ do
     "$installer" install "$skill" --repo "$skill_repo" --host codex
     test -f "$skill_repo/.codex/skills/$skill/SKILL.md"
 done
+
+# Catalog entry points can coexist with a project-owned Chough workflow bundle.
+workflow_repo="$test_dir/workflow-repo"
+mkdir -p "$workflow_repo/.codex/skills/chough-workflow"
+git -C "$workflow_repo" init -q
+printf 'project-owned workflow\n' > "$test_dir/chough-workflow-original.md"
+cp "$test_dir/chough-workflow-original.md" "$workflow_repo/.codex/skills/chough-workflow/SKILL.md"
+for skill in hi chough-routing herdr-core; do
+    "$installer" install "$skill" --repo "$workflow_repo" --host codex
+    cmp "$root_dir/skills/$skill/SKILL.md" "$workflow_repo/.codex/skills/$skill/SKILL.md"
+    cmp "$root_dir/skills/$skill/agents/openai.yaml" "$workflow_repo/.codex/skills/$skill/agents/openai.yaml"
+done
+"$installer" status --repo "$workflow_repo" --json | python3 -c '
+import json
+import sys
+
+installs = json.load(sys.stdin)["installs"]
+assert {item["skill"] for item in installs} == {"hi", "chough-routing", "herdr-core"}
+assert len(installs) == 3
+assert all(item["host"] == "codex" and item["state"] == "current" for item in installs)
+'
+"$installer" update --all --repo "$workflow_repo" --host codex
+for skill in hi chough-routing herdr-core; do
+    cmp "$root_dir/skills/$skill/SKILL.md" "$workflow_repo/.codex/skills/$skill/SKILL.md"
+    "$installer" uninstall "$skill" --repo "$workflow_repo" --host codex
+    test ! -e "$workflow_repo/.codex/skills/$skill"
+done
+"$installer" status --repo "$workflow_repo" --json | python3 -c '
+import json
+import sys
+
+assert json.load(sys.stdin)["installs"] == []
+'
+cmp "$test_dir/chough-workflow-original.md" "$workflow_repo/.codex/skills/chough-workflow/SKILL.md"
+
 "$installer" install agent-coordination --repo "$test_dir/project/subdirectory" --host auto
 "$installer" install spec-sync --repo "$test_dir" --host codex
 "$installer" install let --repo "$test_dir" --host codex
