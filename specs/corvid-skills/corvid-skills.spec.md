@@ -1,6 +1,6 @@
 ---
 module: corvid-skills
-version: 2
+version: 3
 status: active
 files:
   - bin/corvid-skills
@@ -74,7 +74,11 @@ Host directories are fixed: `codex` to `.codex/skills`, `claude` to `.claude/ski
   checkout and copied-fixture installers, so a parent plugin's catalog does not replace
   the intended fixture. The runtime installer's environment override remains supported.
 - `corvid-skills list --json` on this checkout prints the sorted `skills/*/SKILL.md` directory
-  names, which `tests/installer.sh` asserts is a 16 entry sorted list.
+  names, which `tests/installer.sh` asserts is a 19 entry sorted list including
+  `hi`, `chough-routing`, and `herdr-core`.
+- Installing, updating, and uninstalling those three catalog entries preserves an
+  existing project-owned `chough-workflow` bundle. Their copied skill and agent metadata
+  match the catalog, and status reports only the three managed entries in the fixture.
 - `corvid-skills install agent-coordination --repo <repo> --host claude` creates
   `<repo>/.claude/skills/agent-coordination`, writes `<repo>/.corvid-skills.json` with
   `install_mode: "copy"`, and prints `Installed agent-coordination for claude at ...`.
@@ -133,5 +137,6 @@ except rollback paths that exit 1 after restoring the previous filesystem state.
 
 | Change | Date | Version |
 |--------|------|---------|
+| Add HI, Chough routing and Herdr Core entries with managed lifecycle and coexistence coverage | 2026-11-08 | 3 |
 | Isolate direct installer test fixtures from a parent plugin's catalog environment | 2026-11-08 | 2 |
 | Created | 2026-09-10 | 1 |

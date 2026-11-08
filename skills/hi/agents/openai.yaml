@@ -1,0 +1,4 @@
+interface:
+  display_name: "Human Intent"
+  short_description: "Capture human intent with permanent criterion IDs"
+  default_prompt: "Use $hi to capture or export this project's agreed human intent while preserving its wording and IDs."

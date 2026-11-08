@@ -39,6 +39,19 @@ Add product skills (`let`, `rune`, `augur`, `atlas`, …) only when that tool is
 `update --all` (optionally with `--global`) refreshes skills that are already managed; it
 does not install missing ones.
 
+For projects using HI, Chough and Herdr Core, add their entry points individually:
+
+```sh
+fledge skills install hi --host codex
+fledge skills install chough-routing --host codex
+fledge skills install herdr-core --host codex
+```
+
+`chough-routing` finds the product-owned `chough-workflow` bundle and the project's
+current checkpoint. `herdr-core` loads the installed `hc --skill` manual for current
+terminal commands. Follow each entry's discovery steps before initializing or updating
+project state.
+
 To pin a published catalog release, add its tag to the source, for example:
 
 ```sh
@@ -47,11 +60,28 @@ fledge plugins install CorvidLabs/skills@v0.2.0
 
 ## Catalog
 
+### How the workflow fits together
+
+| Owner | Responsibility | Catalog entry |
+| --- | --- | --- |
+| HI | Human intent, agreed wording and permanent criterion IDs | `hi` |
+| Chough | Workflow stages, decisions, evidence references, bugs and resumable checkpoints | `chough-routing`, leading to the canonical `chough-workflow` bundle |
+| SpecSync | Module contracts and the configured change lifecycle | `spec-sync-routing`, with `spec-sync` for shared principles |
+| Fledge | Repository-defined tasks and verification lanes | `fledge-workflows` |
+| Herdr Core (`hc`) | Persistent interactive terminals for agents and programs | `herdr-core` |
+
+Agents perform the implementation and review; the executing environment supplies actual
+test results. Human scope, implementation acceptance and delivery decisions retain their
+own authority. Keep each tool's native records with its owner and link to them from the
+checkpoint. Choose the tools required by the project and the requested work.
+
 ### Coordination and discovery
 
 | Skill | Purpose |
 | --- | --- |
 | `agent-coordination` | Coordinate scoped discovery, the project-selected harness, Fledge, and Spec Sync verification. |
+| `chough-routing` | Locate and resume Chough's authoritative workflow bundle and project state. |
+| `herdr-core` | Run and observe scoped agents and programs in interactive HC terminals. |
 | `let` | Discover local agent context when its federated metadata scope is explicitly permitted. |
 | `rune` | Observe or control a confirmed CLI-agent session through a bounded PTY. |
 | `fledge-workflows` | Discover and use repository-defined Fledge tasks, lanes, plugins, and work commands. |
@@ -60,6 +90,7 @@ fledge plugins install CorvidLabs/skills@v0.2.0
 
 | Skill | Purpose |
 | --- | --- |
+| `hi` | Capture agreed human intent with permanent IDs and export focused context. |
 | `trust` | Adopt, diagnose, and run the composed contract, verification, risk, and provenance gate. |
 | `augur` | Inspect deterministic Git change risk and apply explicit review or block gates. |
 | `attest` | Verify or record provenance evidence for exact reviewed commits. |

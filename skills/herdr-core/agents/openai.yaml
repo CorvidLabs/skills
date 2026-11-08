@@ -1,0 +1,4 @@
+interface:
+  display_name: "Herdr Core"
+  short_description: "Run scoped interactive workers with hc"
+  default_prompt: "Use $herdr-core to run or observe the assigned work in an interactive HC terminal."
