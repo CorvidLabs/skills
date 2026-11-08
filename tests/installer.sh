@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# These tests invoke checkout and copied-fixture installers directly. A parent
+# Fledge plugin (for example Trust) must not select its own catalog for them.
+unset FLEDGE_PLUGIN_DIR
+
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 installer="$root_dir/bin/corvid-skills"
 test_dir="$(mktemp -d)"
