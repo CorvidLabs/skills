@@ -11,9 +11,10 @@ supplements tests and review; it does not approve a change. No API key or LLM re
 
 ## Install
 
-Use the Fledge plugin repo `CorvidLabs/fledge-plugin-augur` (not the standalone `augur`
-kit alone). The public plugin targets **macOS 13+**. Confirm with `fledge augur --help`
-after install.
+For the Fledge entrypoint, use `CorvidLabs/fledge-plugin-augur`. Check its current
+platform/dependency requirements and the identity of the actual invoked tool;
+an independent `augur` binary may have a different version or interface.
+Confirm with `fledge augur --help` after an authorized install.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-augur

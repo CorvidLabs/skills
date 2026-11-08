@@ -39,7 +39,7 @@ git status --short --branch
 git ls-files
 ```
 
-Report the Let step as **blocked** by the current isolation boundary and continue with
+Report Let as **not used: out of scope**, rather than a failed task, and continue with
 repository-local Git and Fledge facts.
 
 ### Authorized local metadata

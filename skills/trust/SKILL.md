@@ -47,6 +47,16 @@ requirements; a degraded provenance result is not proof of verified signatures. 
 whether provenance policy covers proposed changes or the baseline. Neither a successful
 Trust run nor an Attest record substitutes for required independent PR approval.
 
+Inspect the selected refs and actual checked-commit count. A successful empty range
+establishes no commit provenance; a configured soft-policy pass does not qualify
+the exact head. When exact-head provenance is required, inspect that separate
+result. Keep missing, failed, skipped and unknown evidence distinct.
+
+Record the actual invoked child binaries as well as plugin versions. Trust's
+lifecycle lane may intentionally be types-only when product tests are qualified
+elsewhere; report both scopes without silently adding duplicate suites or claiming
+Trust ran those tests. Do not fabricate an attestation to repair a green summary.
+
 ## Adopt or update deliberately
 
 For an adoption request, preview with `fledge trust adopt --dry-run`, then apply adoption,

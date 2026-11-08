@@ -8,6 +8,8 @@ description: Safely observe and control a confirmed CorvidLabs CLI-agent session
 Use `fledge rune` only after the target repository, worktree, session, and active task are
 confirmed. Rune wraps a CLI in a PTY; it does not make a provider reachable, override an
 agent's permissions, or turn a stale session record into a live connection.
+If the project requires Herdr/HC, follow that harness instead; Rune guidance does
+not authorize replacing it or starting another process for an already owned task.
 
 ## Install
 
@@ -52,33 +54,35 @@ fledge rune session stop --name=reviewer && fledge rune session archive --name=r
 
 This is the hard part and the part most likely to mislead you.
 
-**`settled: true` means the child went quiet. It does not mean the work finished.** Quiet has three
-causes: the turn ended, the child is waiting on a human, or it backgrounded something and stopped
-printing. A caller polling for the *absence* of a busy marker concluded work was done 260 seconds
-early.
+**`settled: true` means the child went quiet. It does not mean the work finished.**
+The turn may have ended, the child may be waiting on a human, or background work
+may still be running. Confirm the actual outcome and artifacts.
 
 **`--settle-ms` can return your own input as the answer.** A child that redraws the line on submit —
 `irb`, `python3 -q`, and agent CLIs with composers — sends your prompt a second time, and rune
-counts that as the child speaking. Measured: 3/3 against both, returning in about a second with only
-the echo while the real answer lands in whatever the *next* call captures. Nothing in the reply
-distinguishes this from a real answer.
+can count that as the child speaking. Inspect whether the reply contains the actual
+answer or only echoed input; do not treat a prior timing sample as a guarantee.
 
-**So drive a repainting agent with `--wait-for-regex`, and raise `--settle-ms` as well:**
+For a terminal-output completion marker, use `--wait-for-regex` when the installed
+version supports it. In Rune 0.9.0's help, regex waiting **replaces** the settle
+window; increasing `--settle-ms` does not add a second completion gate:
 
 ```sh
 fledge rune session send --name=x \
-  --wait-for-regex='DONE_[0-9]+' --settle-ms=30000 --timeout-ms=300000 \
+  --wait-for-regex='DONE_[0-9]+' --timeout-ms=300000 \
   "...when finished, print DONE_ followed by the number of files changed"
 ```
 
-Choose a pattern that **cannot appear in your own prompt**, and check `matched:` — `settled: true`
-with `matched: nil` on a regex send means the pattern never fired.
+Choose a pattern that **cannot appear in your own prompt**, and check `matched`
+and process/timeout state. No match is not proof the task failed: the marker may
+have been captured in a file or omitted. Inspect the retained command receipt
+before retrying a mutation.
 
 ## Reading output
 
-`--screen` renders what a terminal would be showing, rather than every frame of every repaint. For a
-full-screen agent it is usually the field you want: a 361KB transcript rendered to 1.1KB, and an
-answer that was absent from the byte stream in 3 of 3 turns was present in the screen in 3 of 3.
+`--screen` renders what a terminal would be showing, rather than every frame of
+every repaint. It can expose the current answer more clearly than the raw stream;
+retain full logs separately when needed.
 
 It is the *end state*, so anything scrolled away is gone, and it renders from the last 256KB.
 
