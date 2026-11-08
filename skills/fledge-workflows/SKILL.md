@@ -35,9 +35,15 @@ If no appropriate Fledge task exists, report that fact and use the repository's 
 fallback; do not invent a new universal command. Prefer common lane names when present
 (`pre-commit`, `check`, `verify`, `ci`) after listing—do not invent a `trust` lane name.
 
+A plugin listing does not prove a guessed invocation is executable. Check the
+installed command's help and dispatch route; distinguish unavailable plugins from
+incorrect syntax. Record the fallback and initial failure when it matters.
+
 For agent runs, set non-interactive mode (`--non-interactive` / `--ni` or
 `FLEDGE_NON_INTERACTIVE=1`) to avoid hanging on prompts. This mode accepts default confirmations; it is not a
 permission check. Use it only for actions already authorized by the task.
+This applies to Fledge commands, not permission to replace a required interactive
+agent session with one-shot execution.
 
 ## Select tools by capability
 
@@ -46,6 +52,10 @@ the supported path forward. Do not downgrade to an older stable line just to avo
 prerelease suffix. Check upstream release guidance when installing or upgrading; keep
 reproducible pins in the repository and CI rather than in shared skills. An installed
 version tells you which commands can run now, not which version should be preferred.
+
+Resolve executable paths, versions and hashes inside the terminal running the task.
+Login shells and HC sessions may resolve different tools from the coordinator;
+plugin wrapper and independently invoked child-tool identities can also differ.
 
 Use `trust` for repositories with a composed Trust gate and `spec-sync-routing` for
 SpecSync lifecycle guidance. Preserve existing pins until an upgrade is in scope.
@@ -64,7 +74,9 @@ fledge work commit -m "feat: describe the change" --all
 fledge work push
 ```
 
-`work start` fails on a dirty tree—commit or stash first. `work push` refuses the default
+`work start` fails on a dirty tree. Preserve unrelated edits and use an isolated
+worktree or coordinate with their owner; do not commit or stash someone else's
+work just to satisfy the command. `work push` refuses the default
 branch (`main`/`master`). Before a commit or push, run the smallest relevant
 repository-defined verification lane. Before a release, run the repository-defined
 **verify / release-style** lane from the **committed** tree (discover via

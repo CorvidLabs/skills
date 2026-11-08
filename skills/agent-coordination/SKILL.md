@@ -6,7 +6,9 @@ description: Coordinate CorvidLabs agents through discovery, observation, execut
 # Agent Coordination
 
 Use this skill as the hub before asking an agent for status, intervening in its work, or
-choosing a worktree. Product detail lives in sibling skills: `let`, `rune`,
+choosing a worktree. Follow the user's and repository's selected harness; this skill
+does not authorize delegation or replace Herdr/HC with Rune. Product detail lives
+in sibling skills: `let`, `rune`,
 `fledge-workflows`, and `spec-sync` / `spec-sync-routing`.
 
 ## Sequence
@@ -31,7 +33,7 @@ git status --short --branch
 git ls-files
 ```
 
-Read only tracked instructions and declared workflows. Mark Let discovery **blocked** and
+Read only tracked instructions and declared workflows. Report Let as **not used: out of scope** and
 continue with repository evidence. Let project-scope finds can pull user catalogs for
 skills/agents (and related kinds) by default, and `where`/worktrees can list siblings; do
 not filter private results after they have already been read. Details and kind matrix: `let`
@@ -47,17 +49,34 @@ are authorized.
 
 ## Observe, then intervene
 
-Confirm repository, worktree, session, and active task first. Use the `rune` skill
+Confirm repository, worktree, session, and active task first. If the project uses
+Herdr/HC, discover `hc --help`, `hc templates`, `hc run --help` and `hc wait --help`.
+Use its named interactive terminals and supported waits; do not substitute a one-shot
+agent or a sleep-poll loop for that workflow. Preserve inherited sessions.
+
+When Rune is the selected harness, use the `rune` skill
 (and `fledge rune run|watch --help` for the installed flag set):
 
 - `fledge rune run --timeout=30 --json -- <agent-cli> …` — bounded, non-interactive
 - `fledge rune watch --log=<path> -- <agent-cli> …` — live PTY; keystrokes go here
 
-For persistent sessions, discover `fledge rune session --help`; use its read/send
+For persistent Rune sessions, discover `fledge rune session --help`; use its read/send
 operations when supported. Send **one** scoped instruction only after
 observation, and never while tests, commits, pushes, migrations, or independent review
 are in progress—inspect Git and CI instead. Never drive the same session from two
 operators, and never start a second agent in a worktree that already has an owner.
+
+When delegation is authorized, assign the exact worktree, source/test/spec paths,
+base revision and output/build ownership. One agent writes each change's native
+lifecycle and live checkpoint. Independent reviewers inspect frozen candidates
+without editing them. Coordinate shared paths and resource-heavy builds explicitly.
+
+Before a fresh worker edits, require its own visible readback of goal and scope,
+binding/rejected decisions with reasons, latest failure/bug state, lesson sources,
+native freshness/human gates, and next task/ownership. File reads alone do not prove
+understanding. Keep unknowns explicit and distinguish fresh handoffs from continuation
+or coordinator-assisted recovery. With Chough, use its checkpoint and native status;
+do not invent a second authoritative lifecycle ledger.
 
 ## Execute through Fledge
 
@@ -85,8 +104,16 @@ revision. Details: `fledge-workflows` skill.
 
 ## Evidence hierarchy
 
-Highest trust first: committed tree and CI on that SHA → PR and review → Fledge/Spec Sync
-results on that SHA → worktree diff → Rune/session output → Let session cards.
+Use evidence appropriate to the claim: the committed tree identifies bytes; an
+assertion and execution receipt establish the behavior tested on those inputs;
+native status establishes its lifecycle predicates; actual human review establishes
+acceptance. None substitutes for the others. Record dirty-input identity when a
+check ran before commit and do not relabel it as a later exact-SHA execution.
+
+Resolve executable paths/versions/hashes inside the running terminal. Retain full
+logs and actual command exits separately from harness wait results. A wait timeout
+or quiet terminal is not proof the command failed or finished; reconcile it with
+the durable receipt and current process state. Session cards are activity hints.
 
 ## Recover
 

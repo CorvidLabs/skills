@@ -51,7 +51,7 @@ fledge plugins install CorvidLabs/skills@v0.2.0
 
 | Skill | Purpose |
 | --- | --- |
-| `agent-coordination` | Coordinate scoped discovery, Rune, Fledge, and Spec Sync verification. |
+| `agent-coordination` | Coordinate scoped discovery, the project-selected harness, Fledge, and Spec Sync verification. |
 | `let` | Discover local agent context when its federated metadata scope is explicitly permitted. |
 | `rune` | Observe or control a confirmed CLI-agent session through a bounded PTY. |
 | `fledge-workflows` | Discover and use repository-defined Fledge tasks, lanes, plugins, and work commands. |
@@ -148,6 +148,22 @@ install `spec-sync-routing` beside it when shared routing is useful. This policy
 depend on a particular Spec Sync generator version or generated directory layout.
 
 ## Verify the catalog
+
+Installer tests establish placement and update behavior, not the correctness of every
+skill instruction. For content changes, inspect the relevant product's current help,
+source or documentation, and exercise the affected workflow where practical. Record
+which claims were checked and which were not; a syntactically valid skill is not a
+behavioral certification.
+
+Keep tool release numbers and environment-specific observations in dated evidence or
+project pins, not permanent "latest" recommendations. Do not present proposed product
+features as available commands. Shared guidance must preserve the user's chosen harness
+and each repository's native workflow.
+
+Chough's workflow bundle is maintained by [CorvidLabs/chough](https://github.com/CorvidLabs/chough)
+and installed through its supported helper. Use that current bundle when the project
+requires Chough; this catalog's coordination guidance does not replace its lifecycle
+or copy its generated skill over a project-owned version.
 
 Run the same Fledge-native checks used by CI:
 

@@ -10,8 +10,9 @@ is optional—an unsigned attestation is still a valid local record.
 
 ## Install
 
-Use the Fledge plugin repo `CorvidLabs/fledge-plugin-attest` (not the standalone `attest`
-kit alone). The public Fledge plugin targets **macOS 13+**.
+For the Fledge entrypoint, use `CorvidLabs/fledge-plugin-attest`. Check its current
+platform/dependency requirements and whether the caller invokes that plugin or an
+independent `attest` binary; their versions and interfaces can differ.
 
 ```sh
 fledge plugins install CorvidLabs/fledge-plugin-attest
@@ -31,6 +32,11 @@ fledge attest verify -C . --range <base>..<head> --json
 Policy loads from `.attest.json` in the current working directory when present. Override
 with `--policy <path>` only when using a non-default file (the path must exist). Treat a
 missing or failed attestation as evidence to investigate, not permission to fabricate one.
+
+Inspect the selected refs and number of commits actually checked. An empty-range
+pass is not proof about HEAD; use the supported exact-commit check when that is
+the claim. A valid unsigned record, a policy pass and authenticated signer
+identity are distinct results.
 
 ## Record proven evidence
 

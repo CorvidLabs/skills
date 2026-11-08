@@ -1,6 +1,6 @@
 ---
 module: corvid-skills
-version: 1
+version: 2
 status: active
 files:
   - bin/corvid-skills
@@ -70,6 +70,9 @@ Host directories are fixed: `codex` to `.codex/skills`, `claude` to `.claude/ski
 
 ## Behavioral Examples
 
+- The installer test harness clears an inherited `FLEDGE_PLUGIN_DIR` before invoking
+  checkout and copied-fixture installers, so a parent plugin's catalog does not replace
+  the intended fixture. The runtime installer's environment override remains supported.
 - `corvid-skills list --json` on this checkout prints the sorted `skills/*/SKILL.md` directory
   names, which `tests/installer.sh` asserts is a 16 entry sorted list.
 - `corvid-skills install agent-coordination --repo <repo> --host claude` creates
@@ -130,4 +133,5 @@ except rollback paths that exit 1 after restoring the previous filesystem state.
 
 | Change | Date | Version |
 |--------|------|---------|
+| Isolate direct installer test fixtures from a parent plugin's catalog environment | 2026-11-08 | 2 |
 | Created | 2026-09-10 | 1 |

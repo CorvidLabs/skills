@@ -17,8 +17,7 @@ or CLI below.
 **TypeScript library** (embed):
 
 ```sh
-npm install @corvidlabs/agent3md
-# or: bun add @corvidlabs/agent3md
+bun add @corvidlabs/agent3md
 ```
 
 **CLI** (select a supported release with the capabilities the task needs):

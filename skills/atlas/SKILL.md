@@ -36,6 +36,9 @@ wins among: `lcov.info`, `coverage/lcov.info`, `coverage/lcov-report/lcov.info`,
 `target/llvm-cov/lcov.info`, `target/coverage/lcov.info`, `target/tarpaulin/lcov.info`.
 Without a report, the result is `{ "note": "no lcov coverage found", "gaps": [] }` (not a
 failure). Record the repository revision with findings.
+An empty gaps list without a coverage report does not establish full test coverage.
+Ownership and source coverage likewise do not prove every requirement or
+acceptance criterion has a passing behavioral assertion.
 
 Other helpers: `--svg <COMPONENT>` for a single SVG on stdout. Current product supports
 `coverage`, `langmix`, `treemap`, `sunburst`, and `calendar`—confirm the installed list

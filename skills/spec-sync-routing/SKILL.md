@@ -11,16 +11,18 @@ This is routing guidance, not a replacement for a project's Spec Sync contract.
 
 Use the repository's Fledge integration where it covers the operation; use the
 independent `specsync` binary for the remaining lifecycle commands. See
-`spec-sync` for release selection and the shipped 6.0 workflow. Refresh generated
-host skills with the selected binary's documented generator, commonly
-`specsync agents install`.
+`spec-sync` for release selection and evidence boundaries. Refresh generated
+host skills only when that update is in scope, with the selected binary's
+documented generator, commonly `specsync agents install`, and inspect the diff.
 
 ## Find local truth first
 
 When a repository uses Spec Sync, locate its generated local skill, configuration, and
 canonical specs before choosing commands or editing lifecycle files:
 
-1. Confirm the CLI: `specsync --version` (binary name is **`specsync`**, not `spec-sync`).
+1. Confirm the CLI path, version and executable identity in the actual execution
+   environment (binary name is **`specsync`**, not `spec-sync`). A matching version
+   string does not establish matching builds.
 2. Find project config (often `.specsync/config.toml`; also `.specsync/config.json` or
    `.specsync.toml` in some repos) and `specs/`.
 3. Read the existing generated host skill before refreshing it. Host paths may include:
@@ -36,8 +38,9 @@ binary and supported workflow; stale generated guidance is a reason to inspect t
 documented migration path, not to prefer a legacy release. Never overwrite an existing
 change ledger to force a newer workflow.
 
-If the repository can generate or refresh its local Spec Sync skill, do that after
-installing this non-colliding routing entry. Do not install the shared `spec-sync` catalog
+If a generated-skill refresh is authorized, use the project's supported generator
+and inspect its output. Installing this routing entry alone does not authorize a
+refresh. Do not install the shared `spec-sync` catalog
 entry over a generated local skill path. Do not overwrite or silently replace generated
 local material with shared text.
 
