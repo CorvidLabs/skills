@@ -109,6 +109,12 @@ checkpoint. Choose the tools required by the project and the requested work.
 | `ci-release-hygiene` | Tie CI and release evidence to the exact current commit. |
 | `public-release-audit` | Audit a repository before an explicit public-release decision. |
 
+### Third-party tools
+
+| Skill | Purpose |
+| --- | --- |
+| `rea` | Investigate authorized software with REA and report findings with their evidence and limits. |
+
 ## Agent compatibility
 
 The skill content is agent-neutral Markdown. Any agent that can load a `SKILL.md` from

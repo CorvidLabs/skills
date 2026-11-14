@@ -24,7 +24,7 @@ import sys
 
 data = json.load(sys.stdin)
 assert {"hi", "chough-routing", "herdr-core"} <= set(data["skills"]), data
-assert len(data["skills"]) == 19
+assert len(data["skills"]) == 20
 assert data["skills"] == sorted(data["skills"])
 '
 for skill in \
@@ -40,6 +40,7 @@ for skill in \
     herdr-core \
     hi \
     public-release-audit \
+    rea \
     spec-sync-routing \
     three-md \
     trust
