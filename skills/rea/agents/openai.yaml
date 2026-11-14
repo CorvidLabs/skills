@@ -1,0 +1,4 @@
+interface:
+  display_name: "REA Reverse Engineering"
+  short_description: "Investigate authorized targets with REA and report evidence"
+  default_prompt: "Use $rea to investigate the confirmed target and report findings with their evidence and limits."

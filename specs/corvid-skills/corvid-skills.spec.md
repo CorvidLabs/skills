@@ -74,7 +74,7 @@ Host directories are fixed: `codex` to `.codex/skills`, `claude` to `.claude/ski
   checkout and copied-fixture installers, so a parent plugin's catalog does not replace
   the intended fixture. The runtime installer's environment override remains supported.
 - `corvid-skills list --json` on this checkout prints the sorted `skills/*/SKILL.md` directory
-  names, which `tests/installer.sh` asserts is a 19 entry sorted list including
+  names, which `tests/installer.sh` asserts is a 20 entry sorted list including
   `hi`, `chough-routing`, and `herdr-core`.
 - Installing, updating, and uninstalling those three catalog entries preserves an
   existing project-owned `chough-workflow` bundle. Their copied skill and agent metadata
