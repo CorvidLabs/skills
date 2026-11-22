@@ -27,7 +27,9 @@ if it does not list the skill, give it the selected `SKILL.md` directly.
 ## Resume from current sources
 
 From the project, run `chough next --environment <env>` for focused guidance and
-`chough status --environment <env>` for the full JSON report. Follow the selected
+`chough status --environment <env>` for the full JSON report. Do that, and do the
+`Run:` line, before any edit of code, tests, specs, or docs. If the active session
+is not this task, `chough session new` and `chough session use` it. Follow the selected
 session; do not initialize or reset an existing objective just to resume it.
 
 Before the first write, read back the goal, binding and rejected choices with
