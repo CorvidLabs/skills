@@ -17,7 +17,13 @@ documented generator, commonly `specsync agents install`, and inspect the diff.
 
 ## Find local truth first
 
-When a repository uses Spec Sync, locate its generated local skill, configuration, and
+When a repository uses Spec Sync, do not edit a contract, or the code it covers, until
+the change exists. If the repo is also a Chough project (`.chough/` or a
+`chough-workflow` skill), Chough is the door: `chough next` and `chough change`, and
+deltas only at `.specsync/changes/<id>/deltas/<module>.md`. Otherwise create or resume
+the change with `specsync` before editing.
+
+Locate its generated local skill, configuration, and
 canonical specs before choosing commands or editing lifecycle files:
 
 1. Confirm the CLI path, version and executable identity in the actual execution
